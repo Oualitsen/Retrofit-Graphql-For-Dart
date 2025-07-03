@@ -279,12 +279,19 @@ ${'return java.util.Objects.hash(${fields.join(", ")});'.ident()}
     final token = interface.token;
     final parents = interface.parents;
     final fields = interface.fields;
+    var decorators = serializeDecorators(interface.directives);
 
-    return """
-      ${serializeDecorators(interface.directives)}
-      public interface $token ${parents.isNotEmpty ? "extends ${parents.map((e) => e.token).join(", ")} " : ""}{
+    var result = """
+public interface $token ${parents.isNotEmpty ? "extends ${parents.map((e) => e.token).join(", ")} " : ""}{
 
 ${fields.map((f) => serializeGetterDeclaration(f, skipModifier: true)).join(";\n").ident()}${fields.isNotEmpty ? ";" : ""}
 }""";
+    if (decorators.isNotEmpty) {
+      return """
+$decorators
+$result
+""";
+    }
+    return result;
   }
 }

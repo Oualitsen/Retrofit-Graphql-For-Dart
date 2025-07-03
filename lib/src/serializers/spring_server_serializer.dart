@@ -28,8 +28,13 @@ class SpringServerSerializer {
     final controllerName = "${service.name}Controller";
     final sericeInstanceName = service.name.firstLow;
     var mappings = grammar.schemaMappings.values.where((sm) => sm.serviceName == service.name).toList();
-
-    return """
+    var mappingSerial = mappings
+        .map((m) {
+          return serializeMappingMethod(m, sericeInstanceName);
+        })
+        .toList()
+        .join("\n");
+    var result = """
 @org.springframework.stereotype.Controller
 public class $controllerName {
 ${'private final ${service.name} $sericeInstanceName;'.ident()}
@@ -43,13 +48,22 @@ ${service.getMethodNames().map((n) {
               var type = service.getMethodType(n)!;
               return serializehandlerMethod(type, method, sericeInstanceName);
             }).toList().join("\n").ident()}
-
-${mappings.isNotEmpty ? "// schema mappings and batch mapping".ident() : ""}
-${mappings.map((m) {
-              return serializeMappingMethod(m, sericeInstanceName);
-            }).toList().join("\n").ident()}
+"""
+        .trim();
+    if (mappings.isNotEmpty) {
+      return """
+$result
+${mappingSerial.ident()}
 }
-""";
+"""
+          .trim();
+    } else {
+      return """
+$result
+}
+"""
+          .trim();
+    }
   }
 
   String serializehandlerMethod(GQQueryType type, GQField method, String sericeInstanceName) {
@@ -75,22 +89,36 @@ ${statement.ident()}
     // get schema mappings by service name
     var mappings =
         grammar.schemaMappings.values.where((sm) => !sm.forbid && sm.serviceName == service.name).toList();
-
-    return """
+    var mappingSerial = """
+${mappings.map((m) {
+              return "${serializeMappingImplMethodHeader(m, true, true)};";
+            }).toList().join("\n")}
+ """
+        .trim();
+    var result = """
 public interface ${service.name} {
+
 ${service.getMethodNames().map((n) {
               var method = service.getMethod(n)!;
               var type = service.getMethodType(n)!;
               return "${serializer.serializeTypeReactive(gqType: createListTypeOnSubscription(method.type, type), reactive: type == GQQueryType.subscription)} ${method.name}(${serializeArgs(method.arguments)});";
             }).toList().join("\n").ident()}
-
-${mappings.isNotEmpty ? "// schema mappings and batch mapping".ident() : ""}
-${mappings.map((m) {
-              return "${serializeMappingImplMethodHeader(m, true, true)};";
-            }).toList().join("\n").ident()}
-
+"""
+        .trim();
+    if (mappings.isNotEmpty) {
+      return """
+$result
+${'// schema mappings and batch mapping'.ident()}
+${mappingSerial.ident()}
+}
+"""
+          .trim();
+    } else {
+      return """
+$result
 }
 """;
+    }
   }
 
   String serializeArgs(List<GQArgumentDefinition> args, [String? prefix]) {
