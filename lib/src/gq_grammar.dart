@@ -22,6 +22,30 @@ import 'package:retrofit_graphql/src/utils.dart';
 
 export 'package:retrofit_graphql/src/gq_grammar_extension.dart';
 
+  const gqDecorators = "@gqDecorators";
+   const gqSkipOnServer = "@gqSkipOnServer";
+   const gqSkipOnClient = "@gqSkipOnClient";
+   const gqArray = "@gqArray";
+   const gqServiceName = "@gqServiceName";
+   const gqServiceNameArg = "name";
+
+   const gqTypeNameDirective = "@gqTypeName";
+   const gqEqualsHashcode = "@gqEqualsHashcode";
+
+   const includeDirective = "@include";
+
+   const skipDirective = "@skip";
+   const gqRepository = "@gqRepository";
+   const gqId = "@gqId";
+   const gqEmbeddedId = "@gqEmbeddedId";
+
+
+   const gqTypeNameDirectiveArgumentName = "name";
+   const gqEqualsHashcodeArgumentName = "fields";
+   const gqDecoratorsArgumentName = "value";
+  
+
+
 class GQGrammar extends GrammarDefinition {
   var logger = Logger();
   static const typename = "__typename";
@@ -31,23 +55,7 @@ class GQGrammar extends GrammarDefinition {
       arguments: [],
       directives: []);
 
-  static const gqDecorators = "@gqDecorators";
-  static const gqSkipOnServer = "@gqSkipOnServer";
-  static const gqSkipOnClient = "@gqSkipOnClient";
-  static const gqArray = "@gqArray";
-  static const gqServiceName = "@gqServiceName";
-  static const gqServiceNameArg = "name";
-
-  static const gqTypeNameDirective = "@gqTypeName";
-  static const gqEqualsHashcode = "@gqEqualsHashcode";
-
-  static const includeDirective = "@include";
-
-  static const skipDirective = "@skip";
-
-  static const gqTypeNameDirectiveArgumentName = "name";
-  static const gqEqualsHashcodeArgumentName = "fields";
-  static const gqDecoratorsArgumentName = "value";
+ 
   final Set<String> scalars = {
     "ID",
     "Boolean",
@@ -107,6 +115,7 @@ class GQGrammar extends GrammarDefinition {
   final Map<String, GQInputDefinition> inputs = {};
   final Map<String, GQTypeDefinition> types = {};
   final Map<String, GQInterfaceDefinition> interfaces = {};
+  final Map<String, GQInterfaceDefinition> repositories = {};
   final Map<String, GQQueryDefinition> queries = {};
   final Map<String, GQEnumDefinition> enums = {};
   final Map<String, GQTypeDefinition> projectedTypes = {};
@@ -184,11 +193,12 @@ class GQGrammar extends GrammarDefinition {
 
   void _onDone() {
     convertUnionsToInterfaces();
-
     setDirectivesDefaulValues();
     updateInterfaceParents();
+    
 
     if (mode == CodeGenerationMode.client) {
+      handleRepositories(false);
       if (generateAllFieldsFragments) {
         createAllFieldsFragments();
         if (autoGenerateQueries) {
@@ -204,6 +214,10 @@ class GQGrammar extends GrammarDefinition {
       generateImplementedInterfaces();
       updateFragmentAllTypesDependencies();
     } else {
+
+      checkIdAndEmbededId();
+      handleRepositories(true);
+
       generateSchemaMappings();
       generateServices();
     }

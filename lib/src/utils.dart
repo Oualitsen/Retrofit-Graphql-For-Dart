@@ -69,7 +69,7 @@ String? getNameValueFromDirectives(Iterable<GQDirectiveValue> directives) {
   }
   var name = dirs.first.arguments
       .firstWhere(
-          (arg) => arg.token == GQGrammar.gqTypeNameDirectiveArgumentName)
+          (arg) => arg.token == gqTypeNameDirectiveArgumentName)
       .value as String;
   return name.replaceAll("\"", "");
 }

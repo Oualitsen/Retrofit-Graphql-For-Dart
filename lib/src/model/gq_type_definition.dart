@@ -53,7 +53,7 @@ class GQTypeDefinition extends GQTokenWithFields with GqHasDirectives {
   }
 
   Set<String> getIdentityFields(GQGrammar g) {
-    var directive = _directiveValues[GQGrammar.gqEqualsHashcode];
+    var directive = _directiveValues[gqEqualsHashcode];
     if (directive != null) {
       var directiveFields =
           ((directive.arguments.first.value as List)[1] as List)

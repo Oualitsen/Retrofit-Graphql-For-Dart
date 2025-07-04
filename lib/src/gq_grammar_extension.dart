@@ -24,6 +24,84 @@ const String allFieldsFragmentsFileName = "allFieldsFragments";
 const allFields = '_all_fields';
 
 extension GQGrammarExtension on GQGrammar {
+  void checkIdAndEmbededId() {
+    types.forEach((k, v) {
+      _checkIdAndEmbededId(v);
+    });
+    interfaces.forEach((k, v) {
+      _checkIdAndEmbededId(v);
+    });
+  }
+
+  void _checkIdAndEmbededId(GQTypeDefinition type) {
+    var idList = type
+        .getSerializableFields(this)
+        .where((f) => f.getDirectiveByName(gqId) != null || f.getDirectiveByName(gqEmbeddedId) != null)
+        .toList();
+        
+    if (idList.length > 1) {
+      throw ParseException("Multipe fields of type ${type.token} are annotated with $gqId/$gqEmbeddedId. Entities must have only one field having directive $gqId/$gqEmbeddedId. Fields are: ${idList.map((e) => e.name).join(", ")}");
+    }
+     
+  }
+
+  void handleRepositories([bool check = true]) {
+    interfaces.forEach((k, v) {
+      var repo = v.getDirectiveByName(gqRepository);
+      if (repo != null) {
+        if (check) {
+          checkRepository(v);
+        }
+        repositories[k] = v;
+      }
+    });
+    interfaces.removeWhere((k, _) => repositories.containsKey(k));
+  }
+
+  void checkRepository(GQInterfaceDefinition interface) {
+    var repo = interface.getDirectiveByName(gqRepository)!;
+    var typeName = repo.getArgValueAsString("onType");
+    if (typeName == null) {
+      throw ParseException("onType is required on $gqRepository directive");
+    }
+
+    var type = types[typeName];
+    if (type == null) {
+      throw ParseException(
+          "Type '$typeName' referenced by directive '$gqRepository' is not defined or skipped");
+    }
+
+    var idFieldName = repo.getArgValueAsString("id");
+    if (idFieldName == null) {
+      // find the field with directive @gqId
+      var idFields = type
+          .getFields()
+          .where((f) =>
+              f.getDirectiveByName(gqId) != null ||
+              f.getDirectiveByName(gqEmbeddedId) != null)
+          .toList();
+
+      if (idFields.isNotEmpty) {}
+
+      if (idFields.isEmpty) {
+        throw ParseException("id is required on $gqRepository directive");
+      } else {
+        idFieldName = idFields.first.name;
+      }
+    }
+
+    var idFields = type
+        .getSerializableFields(this)
+        .where((f) => f.name == idFieldName)
+        .toList();
+    if (idFields.isEmpty) {
+      throw ParseException(
+          "Field '$typeName.$idFieldName' referenced by directive '$gqRepository' is not defined or skipped");
+    }
+
+    print("typeName = $typeName, idFIeldName = $idFieldName");
+  }
+
   void addSchemaMapping(GQSchemaMapping mapping) {
     var m = schemaMappings[mapping.key];
     if (m == null || (!m.batch && mapping.batch)) {
@@ -49,8 +127,8 @@ extension GQGrammarExtension on GQGrammar {
 
   String getServiceName(GQField field, [String suffix = "Service"]) {
     var serviceName = field
-        .getDirectiveByName(GQGrammar.gqServiceName)
-        ?.getArgValueAsString(GQGrammar.gqServiceNameArg);
+        .getDirectiveByName(gqServiceName)
+        ?.getArgValueAsString(gqServiceNameArg);
     serviceName ??= "${field.type.token.firstUp}$suffix";
     if (suffix.isNotEmpty && !serviceName.endsWith(suffix)) {
       serviceName += suffix;
@@ -1031,7 +1109,7 @@ extension GQGrammarExtension on GQGrammar {
       required CodeGenerationMode mode}) {
     // find the list
     var decorators = directives
-        .where((d) => d.token == GQGrammar.gqDecorators)
+        .where((d) => d.token == gqDecorators)
         .where((d) {
           switch (mode) {
             case CodeGenerationMode.client:
@@ -1065,10 +1143,10 @@ extension GQGrammarExtension on GQGrammar {
     String token;
     switch (mode) {
       case CodeGenerationMode.client:
-        token = GQGrammar.gqSkipOnClient;
+        token = gqSkipOnClient;
         break;
       case CodeGenerationMode.server:
-        token = GQGrammar.gqSkipOnServer;
+        token = gqSkipOnServer;
         break;
     }
     var skipOnList = directives.where((d) => d.token == token).toList();

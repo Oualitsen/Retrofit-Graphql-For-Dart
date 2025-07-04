@@ -1,6 +1,7 @@
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/gq_argument.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
+import 'package:retrofit_graphql/src/model/gq_interface.dart';
 import 'package:retrofit_graphql/src/model/gq_queries.dart';
 import 'package:retrofit_graphql/src/model/gq_service.dart';
 import 'package:retrofit_graphql/src/model/gq_shcema_mapping.dart';
@@ -85,6 +86,11 @@ ${statement.ident()}
     return type;
   }
 
+  String serializeRepository(GQInterfaceDefinition interface) {
+    return serializer.serializeInterface(interface);
+  }
+
+ 
   String serializeService(GQService service) {
     // get schema mappings by service name
     var mappings =

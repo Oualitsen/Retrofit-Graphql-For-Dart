@@ -47,7 +47,7 @@ abstract class GQTokenWithFields extends GQToken {
   List<GQField> getSkinOnServerFields() {
     return _skipOnServerFields ??= fields.where((field) {
       return field.directives
-          .where((d) => d.token == GQGrammar.gqSkipOnServer)
+          .where((d) => d.token == gqSkipOnServer)
           .isNotEmpty;
     }).toList();
   }
@@ -55,7 +55,7 @@ abstract class GQTokenWithFields extends GQToken {
   List<GQField> getSkinOnClientFields() {
     return _skipOnClientFields ??= fields.where((field) {
       return field.directives
-          .where((d) => d.token == GQGrammar.gqSkipOnClient)
+          .where((d) => d.token == gqSkipOnClient)
           .isNotEmpty;
     }).toList();
   }

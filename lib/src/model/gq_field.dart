@@ -54,11 +54,11 @@ class GQField with GqHasDirectives {
 
   //check for inclue or skip directives
   bool get hasInculeOrSkipDiretives => _containsSkipOrIncludeDirective ??= directives
-      .where((d) => [GQGrammar.includeDirective, GQGrammar.skipDirective].contains(d.token))
+      .where((d) => [includeDirective, skipDirective].contains(d.token))
       .isNotEmpty;
 
   bool get serialzeAsArray {
-    _isArray ??= directives.where((e) => e.token == GQGrammar.gqArray).isNotEmpty;
+    _isArray ??= directives.where((e) => e.token == gqArray).isNotEmpty;
     return _isArray!;
   }
 
