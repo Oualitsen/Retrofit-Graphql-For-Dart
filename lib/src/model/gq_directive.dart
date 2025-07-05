@@ -55,10 +55,13 @@ enum GQDirectiveScope {
 
 class GQDirectiveValue extends GQToken {
   final List<GQDirectiveScope> locations;
-  final List<GQArgumentValue> arguments;
   final Map<String, GQArgumentValue> _argsMap = {};
 
-  GQDirectiveValue(super.name, this.locations, this.arguments) {
+  GQDirectiveValue(super.name, this.locations, List<GQArgumentValue> arguments) {
+    _addArgument(arguments);
+  }
+
+  void _addArgument(List<GQArgumentValue> arguments) {
     for (var arg in arguments) {
       _argsMap[arg.token] = arg;
     }
@@ -74,7 +77,7 @@ class GQDirectiveValue extends GQToken {
         argsToAdd.add(newArgValue);
       }
     }
-    arguments.addAll(argsToAdd);
+    _addArgument(argsToAdd);
   }
 
   Object? getArgValue(String name) {
@@ -84,11 +87,20 @@ class GQDirectiveValue extends GQToken {
 
   String? getArgValueAsString(String name) {
     var value = getArgValue(name);
-    if(value == null) {
+    if (value == null) {
       return null;
     }
     var str = value as String;
-    return str.substring(1, str.length-1);
+    if (str.isNotEmpty) {
+      if ((str[0] == '"' && str[str.length - 1] == '"') || (str[0] == "'" && str[str.length - 1] == "'")) {
+        return str.substring(1, str.length - 1);
+      }
+    }
+    return str;
+  }
+
+  void addArg(String name, Object? value) {
+    _argsMap[name] = GQArgumentValue(name, value);
   }
 
   @override
@@ -97,7 +109,23 @@ class GQDirectiveValue extends GQToken {
     if (GQGrammar.directivesToSkip.contains(token)) {
       return "";
     }
+    var arguments = getArguments();
     var args = arguments.isEmpty ? "" : "(${arguments.map((e) => e.serialize()).join(",")})";
     return "$token$args";
+  }
+
+  List<GQArgumentValue> getArguments() {
+    return _argsMap.values.toList();
+  }
+
+  static GQDirectiveValue createGqDecorators({
+    required List<String> decorators,
+    bool applyOnServer = true,
+    bool applyOnClient = true,
+  }) {
+    return GQDirectiveValue(gqDecorators, [], [
+      GQArgumentValue("value", ["[[", decorators.map((s) => '"$s"').toList(), "]]"]),
+      GQArgumentValue("applyOnServer", true),
+    ]);
   }
 }

@@ -1,0 +1,23 @@
+
+
+directive @gqJpaQuery(
+  value: String
+  nativeQuery: Boolean = false
+  countQuery: String
+  countProjection: String
+  name: String
+  countName: String
+) on FIELD_DEFINITION
+
+type User {
+    id: ID! @gqId
+    name: String
+}
+
+interface UserRepository @gqRepository(onType: "User") {
+    _: String
+
+    findById(id: ID!): User @gqJpaQuery(value: """
+    select * from User u where u.id = :id
+    """, azul: 13)
+}

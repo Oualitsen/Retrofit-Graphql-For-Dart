@@ -1,5 +1,6 @@
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/gq_argument.dart';
+import 'package:retrofit_graphql/src/model/gq_directive.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
 import 'package:retrofit_graphql/src/model/gq_interface.dart';
 import 'package:retrofit_graphql/src/model/gq_queries.dart';
@@ -11,9 +12,12 @@ import 'package:retrofit_graphql/src/extensions.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
 
 class SpringServerSerializer {
+  final String? defaultRepositoryBase;
+
   final GQGrammar grammar;
   final JavaSerializer serializer;
-  SpringServerSerializer(this.grammar)
+
+  SpringServerSerializer(this.grammar, {this.defaultRepositoryBase})
       : assert(grammar.mode == CodeGenerationMode.server,
             "Gramar must be in code generation mode = `CodeGenerationMode.server`"),
         serializer = JavaSerializer(grammar);
@@ -87,10 +91,31 @@ ${statement.ident()}
   }
 
   String serializeRepository(GQInterfaceDefinition interface) {
+    // find the _ field and ignore it
+    interface.getSerializableFields(grammar).where((f) => f.name == "_").forEach((f) {
+      f.addDirective(GQDirectiveValue(gqSkipOnServer, [], []));
+    });
+    var dec = GQDirectiveValue.createGqDecorators(
+        decorators: ["@org.springframework.stereotype.Repository"], applyOnClient: false);
+    interface.addDirective(dec);
+    interface.invalidateSerializableFieldsCache();
+    var gqRepo = interface.getDirectiveByName(gqRepository)!;
+    var id = gqRepo.getArgValueAsString("id");
+    var ontType = gqRepo.getArgValueAsString("onType")!;
+    var type = grammar.getType(ontType);
+    var idField = type.getSerializableFields(grammar).where((f) => f.name == id).first;
+    interface.parents.add(GQInterfaceDefinition(
+        name:
+            "org.springframework.data.jpa.repository.JpaRepository<${serializer.serializeType(idField.type, false)}, $ontType>",
+        nameDeclared: false,
+        fields: [],
+        parentNames: {},
+        directives: [],
+        interfaceNames: {}));
+
     return serializer.serializeInterface(interface);
   }
 
- 
   String serializeService(GQService service) {
     // get schema mappings by service name
     var mappings =
@@ -231,5 +256,14 @@ $result
         break;
     }
     return "@org.springframework.graphql.data.method.annotation.$result";
+  }
+
+  String serializeQueryAnnotation(GQDirectiveValue value) {
+    var def = grammar.directiveDefinitions[value.token];
+    print("def = ${def}");
+    var args = value.getArguments().map((arg) => "${arg.token} = ${arg.value}").join(", ");
+    return """
+      return @Query(${args})
+    """;
   }
 }

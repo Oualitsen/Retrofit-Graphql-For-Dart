@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:retrofit_graphql/src/serializers/language.dart';
+import 'package:retrofit_graphql/src/serializers/spring_server_serializer.dart';
 import 'package:test/test.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:petitparser/petitparser.dart';
@@ -305,7 +306,6 @@ public void setId(final String id) {
     for (var e in entity.fields) {
       expect(class_, contains(javaSerialzer.serializeGetterDeclaration(e, skipModifier: true)));
     }
-    print(class_);
   });
 
   test("Java interface implementing one interface serialization", () {
@@ -341,5 +341,33 @@ public void setId(final String id) {
     for (var e in entity.fields) {
       expect(class_, contains(javaSerialzer.serializeGetterDeclaration(e, skipModifier: true)));
     }
+  });
+
+  test("Repository serialization", () {
+    final GQGrammar g =
+        GQGrammar(identityFields: ["id"], typeMap: typeMapping, mode: CodeGenerationMode.server);
+    final text = File("test/serializers/java/types/repository_serialization_test.graphql").readAsStringSync();
+    var parser = g.buildFrom(g.fullGrammar().end());
+    var parsed = parser.parse(text);
+    expect(parsed is Success, true);
+    var repo = g.repositories["UserRepository"]!;
+    var serialzer = SpringServerSerializer(g);
+    var repoSerial = serialzer.serializeRepository(repo);
+    print(repoSerial);
+  });
+
+  test("Query serialization", () {
+    final GQGrammar g =
+        GQGrammar(identityFields: ["id"], typeMap: typeMapping, mode: CodeGenerationMode.server);
+    final text = File("test/serializers/java/types/repository_serialization_test.graphql").readAsStringSync();
+    var parser = g.buildFrom(g.fullGrammar().end());
+    var parsed = parser.parse(text);
+    expect(parsed is Success, true);
+    var repo = g.repositories["UserRepository"]!;
+    var directive = repo.getFieldByName("findById")!.getDirectiveByName("@gqJpaQuery")!;
+    var serialzer = SpringServerSerializer(g);
+    print(directive);
+    var r = serialzer.serializeQueryAnnotation(directive);
+    print(r);
   });
 }

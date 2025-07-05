@@ -27,14 +27,14 @@ ${def.values.map((e) => e.value).toList().join(", ").ident()}
     final type = def.type;
     final name = def.name;
     final hasInculeOrSkipDiretives = def.hasInculeOrSkipDiretives;
-    return "${serializeDecorators(def.directives)}private ${serializeType(type, hasInculeOrSkipDiretives, def.serialzeAsArray)} $name;";
+    return "${serializeDecorators(def.getDirectives())}private ${serializeType(type, hasInculeOrSkipDiretives, def.serialzeAsArray)} $name;";
   }
 
   String serializeArgument(GQField def) {
     final type = def.type;
     final name = def.name;
     final hasInculeOrSkipDiretives = def.hasInculeOrSkipDiretives;
-    return "${serializeDecorators(def.directives)}final ${serializeType(type, hasInculeOrSkipDiretives, def.serialzeAsArray)} $name";
+    return "${serializeDecorators(def.getDirectives())}final ${serializeType(type, hasInculeOrSkipDiretives, def.serialzeAsArray)} $name";
   }
 
   String serializeTypeReactive(
@@ -66,7 +66,7 @@ ${def.values.map((e) => e.value).toList().join(", ").ident()}
   @override
   String doSerializeInputDefinition(GQInputDefinition def) {
     return """
-${serializeDecorators(def.directives)}
+${serializeDecorators(def.getDirectives())}
 public class ${def.token} {
 
 ${serializeListText(def.getSerializableFields(grammar).map((e) => serializeField(e)).toList(), join: "\n", withParenthesis: false).ident()}
@@ -203,7 +203,7 @@ ${statements.join("\n").ident()}
     final token = def.token;
     final interfaceNames = def.interfaceNames;
     return """
-${serializeDecorators(def.directives)}
+${serializeDecorators(def.getDirectives())}
 public class $token ${_serializeImplements(interfaceNames)}{
   
 ${serializeListText(def.getSerializableFields(grammar).map((e) => serializeField(e)).toList(), join: "\n", withParenthesis: false).ident()}
@@ -278,8 +278,9 @@ ${'return java.util.Objects.hash(${fields.join(", ")});'.ident()}
   String serializeInterface(GQInterfaceDefinition interface) {
     final token = interface.token;
     final parents = interface.parents;
-    final fields = interface.fields;
-    var decorators = serializeDecorators(interface.directives);
+    final fields = interface.getSerializableFields(grammar);
+    print(fields);
+    var decorators = serializeDecorators(interface.getDirectives());
 
     var result = """
 public interface $token ${parents.isNotEmpty ? "extends ${parents.map((e) => e.token).join(", ")} " : ""}{
