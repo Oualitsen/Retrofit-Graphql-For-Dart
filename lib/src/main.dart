@@ -8,17 +8,8 @@ import 'package:petitparser/petitparser.dart';
 import 'package:retrofit_graphql/src/serializers/spring_server_serializer.dart';
 import 'package:args/args.dart';
 import 'dart:convert';
-const destinationDir =
-    "C:/Users/Ramdane/Documents/Projects/Dentilynx/dentilynx-back/src/main/java/com/dentlynx/generated";
-const packageName = "com.dentlynx.generated";
-const graphqlFile =
-    "C:/Users/Ramdane/Documents/Projects/Dentilynx/dentilynx-back/src/main/resources/graphql/schema.graphqls";
-
-
-
 
 Future<void> main(List<String> arguments) async {
-
   final parser = ArgParser()
     ..addOption(
       'config',
@@ -53,8 +44,8 @@ ${parser.usage}
     exit(1);
   }
 
-    final raw = await configFile.readAsString();
-    Map<String, dynamic> json;
+  final raw = await configFile.readAsString();
+  Map<String, dynamic> json;
   try {
     json = jsonDecode(raw) as Map<String, dynamic>;
   } on FormatException catch (e) {
@@ -79,58 +70,125 @@ ${parser.usage}
     "Null": "null"
   };
 
+  if (config.schemaPaths.isEmpty) {
+    stderr.writeln('❌ schema_paths is empty, please provide at least one file');
+    exit(1);
+  }
+  StringBuffer sb = StringBuffer();
+  for (var path in config.schemaPaths) {
+    var file = File(path);
+    if (!await file.exists()) {
+      stderr.writeln('❌ Config file not found at: $configPath');
+      exit(1);
+    } else {
+      sb.write(file.readAsStringSync());
+      sb.write("\n");
+    }
+  }
 
-  
-  final grammar = GQGrammar(typeMap: config.typeMappings!, mode: CodeGenerationMode.server);
-  var file = File(graphqlFile);
-  var schema = file.readAsLinesSync().join("\n");
+  final grammar =
+      GQGrammar(typeMap: config.typeMappings!, mode: CodeGenerationMode.server);
   var gqParser = grammar.buildFrom(grammar.fullGrammar().end());
-  gqParser.parse(schema);
-
-  // lets generate some code!
-  generateClasses(grammar);
-  
+  gqParser.parse(sb.toString());
+  generateClasses(grammar, config);
 }
 
-void generateClasses(GQGrammar grammar) {
+void generateClasses(GQGrammar grammar, GeneratorConfig config) {
+  final packageName = config.basePackage;
+  final destinationDir = config.outputDir;
   final serialzer = JavaSerializer(grammar);
   final springSeriaalizer = SpringServerSerializer(grammar);
-grammar.getSerializableTypes().forEach((def) {
+  grammar.getSerializableTypes().forEach((def) {
     var text = serialzer.serializeTypeDefinition(def);
-    writeToFile(text, "${def.token}.java", "types", ["$packageName.enums", "$packageName.interfaces"]);
+    writeToFile(
+        data: text,
+        fileName: "${def.token}.java",
+        subpackage: "types",
+        imports: ["$packageName.enums", "$packageName.interfaces"],
+        destinationDir: destinationDir,
+        packageName: packageName);
   });
   grammar.interfaces.forEach((k, def) {
     var text = serialzer.serializeInterface(def);
-    writeToFile(text, "$k.java", "interfaces", ["$packageName.enums", "$packageName.types"]);
+    writeToFile(
+        data: text,
+        fileName: "$k.java",
+        subpackage: "interfaces",
+        imports: ["$packageName.enums", "$packageName.types"],
+        destinationDir: destinationDir,
+        packageName: packageName);
   });
   grammar.enums.forEach((k, def) {
     var text = serialzer.serializeEnumDefinition(def);
-    writeToFile(text, "$k.java", "enums", []);
+    writeToFile(
+        data: text,
+        fileName: "$k.java",
+        subpackage: "enums",
+        imports: [],
+        destinationDir: destinationDir,
+        packageName: packageName);
   });
   grammar.inputs.forEach((k, def) {
     var text = serialzer.serializeInputDefinition(def);
-    writeToFile(text, "$k.java", "inputs", ["$packageName.enums"]);
+    writeToFile(
+        data: text,
+        fileName: "$k.java",
+        subpackage: "inputs",
+        imports: ["$packageName.enums"],
+        destinationDir: destinationDir,
+        packageName: packageName);
   });
 
   grammar.services.forEach((k, def) {
     var text = springSeriaalizer.serializeService(def);
     writeToFile(
-        text, "$k.java", "services", ["$packageName.enums", "$packageName.types", "$packageName.inputs"]);
+        data: text,
+        fileName: "$k.java",
+        subpackage: "services",
+        imports: [
+          "$packageName.enums",
+          "$packageName.types",
+          "$packageName.inputs"
+        ],
+        destinationDir: destinationDir,
+        packageName: packageName);
   });
 
   grammar.services.forEach((k, def) {
     var text = springSeriaalizer.serializeController(def);
-    writeToFile(text, "${k}Controller.java", "controllers",
-        ["$packageName.enums", "$packageName.types", "$packageName.inputs", "$packageName.services"]);
+    writeToFile(
+        data: text,
+        fileName: "${k}Controller.java",
+        subpackage: "controllers",
+        imports: [
+          "$packageName.enums",
+          "$packageName.types",
+          "$packageName.inputs",
+          "$packageName.services"
+        ],
+        destinationDir: destinationDir,
+        packageName: packageName);
   });
 
   grammar.repositories.forEach((k, def) {
     var text = springSeriaalizer.serializeRepository(def);
-    writeToFile(text, "${k}.java", "repositories", ["$packageName.enums", "$packageName.types"]);
+    writeToFile(
+        data: text,
+        fileName: "${k}.java",
+        subpackage: "repositories",
+        imports: ["$packageName.enums", "$packageName.types"],
+        destinationDir: destinationDir,
+        packageName: packageName);
   });
 }
 
-void writeToFile(String data, String fileName, String subpackage, List<String> imports) {
+void writeToFile(
+    {required String data,
+    required String fileName,
+    required String subpackage,
+    required List<String> imports,
+    required String destinationDir,
+    required String packageName}) {
   var file = File("$destinationDir/$subpackage/$fileName");
   if (!file.existsSync()) {
     file.createSync(recursive: true);
