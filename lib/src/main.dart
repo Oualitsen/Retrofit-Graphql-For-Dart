@@ -1,7 +1,11 @@
 import 'dart:io';
+import 'dart:vmservice_io';
 
 import 'package:retrofit_graphql/src/config.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
+import 'package:retrofit_graphql/src/serializers/dart_client_serializer.dart';
+import 'package:retrofit_graphql/src/serializers/dart_serializer.dart';
+import 'package:retrofit_graphql/src/serializers/gq_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/java_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
 import 'package:petitparser/petitparser.dart';
@@ -15,7 +19,6 @@ Future<void> main(List<String> arguments) async {
       'config',
       abbr: 'c',
       help: 'Path to the config file',
-      defaultsTo: 'graphql_codegen.json',
     )
     ..addFlag(
       'help',
@@ -28,7 +31,7 @@ Future<void> main(List<String> arguments) async {
 
   if (args['help'] as bool) {
     print('''
-Usage: graphql_codegen generate [options]
+Usage: gqlcodegen [options]
 
 Options:
 ${parser.usage}
@@ -36,7 +39,16 @@ ${parser.usage}
     exit(0);
   }
 
-  final configPath = args['config'] as String;
+  final configPath = args['config'] as String?;
+  if (configPath == null) {
+    print('''
+Usage: gqlcodegen generate [options]
+
+Options:
+${parser.usage}
+''');
+    exit(1);
+  }
   final configFile = File(configPath);
 
   if (!await configFile.exists()) {
@@ -57,6 +69,9 @@ ${parser.usage}
   late GeneratorConfig config;
   try {
     config = GeneratorConfig.fromJson(json);
+    if (!["server", "client"].contains(config.mode)) {
+      stderr.writeln('❌ Error parsing config: mode must be one of "server" or "client"');
+    }
   } catch (e) {
     stderr.writeln('❌ Error parsing config: $e');
     exit(1);
@@ -78,7 +93,7 @@ ${parser.usage}
   for (var path in config.schemaPaths) {
     var file = File(path);
     if (!await file.exists()) {
-      stderr.writeln('❌ Config file not found at: $configPath');
+      stderr.writeln('❌ Schema file "$configPath" not found');
       exit(1);
     } else {
       sb.write(file.readAsStringSync());
@@ -86,15 +101,53 @@ ${parser.usage}
     }
   }
 
-  final grammar =
-      GQGrammar(typeMap: config.typeMappings!, mode: CodeGenerationMode.server);
+  final grammar = createGrammar(config);
   var gqParser = grammar.buildFrom(grammar.fullGrammar().end());
   gqParser.parse(sb.toString());
-  generateClasses(grammar, config);
+  var mode = config.getMode();
+  if (mode == CodeGenerationMode.server) {
+    generateServerClasses(grammar, config);
+  } else if (mode == CodeGenerationMode.client) {
+    generateClientClasses(grammar, config);
+  }
 }
 
-void generateClasses(GQGrammar grammar, GeneratorConfig config) {
-  final packageName = config.basePackage;
+GQGrammar createGrammar(GeneratorConfig config) {
+  var mode = config.getMode();
+  if (mode == CodeGenerationMode.server) {
+    return GQGrammar(mode: mode, typeMap: config.typeMappings!, identityFields: config.identityFields);
+  } else {
+    var clientConfig = config.clientConfig;
+
+    return GQGrammar(
+      mode: mode,
+      typeMap: config.typeMappings!,
+      identityFields: config.identityFields,
+      generateAllFieldsFragments: clientConfig?.generateAllFieldsFragments ?? false,
+      nullableFieldsRequired: clientConfig?.nullableFieldsRequired ?? false,
+      autoGenerateQueries: clientConfig?.autoGenerateQueries ?? false,
+      defaultAlias: clientConfig?.defaultAlias,
+      operationNameAsParameter: clientConfig?.operationNameAsParameter ?? false,
+    );
+  }
+}
+
+void generateClientClasses(GQGrammar grammar, GeneratorConfig config) async {
+  final GqSerializer serializer = DartSerializer(grammar);
+  final dcs = DartClientSerializer(grammar);
+  final inputs = dcs.serializeInputs(serializer);
+  final enums = dcs.generateEnums(serializer);
+  final types = dcs.generateTypes(serializer);
+  final client = dcs.serializeClient();
+  var outputDir = config.outputDir;
+  await File('$outputDir/$inputsFileName.dart').writeAsString(inputs);
+  await File('$outputDir/$enumsFileName.dart').writeAsString(enums);
+  await File('$outputDir/$typesFileName.dart').writeAsString(types);
+  await File('$outputDir/$clientFileName.dart').writeAsString(client);
+}
+
+void generateServerClasses(GQGrammar grammar, GeneratorConfig config) {
+  final packageName = config.serverConfig!.spring!.basePackage;
   final destinationDir = config.outputDir;
   final serialzer = JavaSerializer(grammar);
   final springSeriaalizer = SpringServerSerializer(grammar);
@@ -145,11 +198,7 @@ void generateClasses(GQGrammar grammar, GeneratorConfig config) {
         data: text,
         fileName: "$k.java",
         subpackage: "services",
-        imports: [
-          "$packageName.enums",
-          "$packageName.types",
-          "$packageName.inputs"
-        ],
+        imports: ["$packageName.enums", "$packageName.types", "$packageName.inputs"],
         destinationDir: destinationDir,
         packageName: packageName);
   });
@@ -160,12 +209,7 @@ void generateClasses(GQGrammar grammar, GeneratorConfig config) {
         data: text,
         fileName: "${k}Controller.java",
         subpackage: "controllers",
-        imports: [
-          "$packageName.enums",
-          "$packageName.types",
-          "$packageName.inputs",
-          "$packageName.services"
-        ],
+        imports: ["$packageName.enums", "$packageName.types", "$packageName.inputs", "$packageName.services"],
         destinationDir: destinationDir,
         packageName: packageName);
   });
