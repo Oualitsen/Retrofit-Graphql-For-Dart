@@ -1,0 +1,14 @@
+{
+    "schema_paths": ["schema.graphql", "shared/schema.graphql"],
+    "mode": "server",
+    "base_package": "com.mycompany.graphql.controllers",
+    "type_mappings": {
+      "ID": "String",
+      "String": "String",
+      "Float": "Double",
+      "Int": "Integer",
+      "Boolean": "Boolean",
+      "Null": "null"
+    },
+    "output_dir": "src/main/java"
+  }

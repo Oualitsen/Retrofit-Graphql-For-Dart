@@ -1,19 +1,76 @@
 import 'dart:io';
 
+import 'package:retrofit_graphql/src/config.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/serializers/java_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
 import 'package:petitparser/petitparser.dart';
 import 'package:retrofit_graphql/src/serializers/spring_server_serializer.dart';
-
+import 'package:args/args.dart';
+import 'dart:convert';
 const destinationDir =
     "C:/Users/Ramdane/Documents/Projects/Dentilynx/dentilynx-back/src/main/java/com/dentlynx/generated";
 const packageName = "com.dentlynx.generated";
 const graphqlFile =
     "C:/Users/Ramdane/Documents/Projects/Dentilynx/dentilynx-back/src/main/resources/graphql/schema.graphqls";
 
-void main() {
-  final map = {
+
+
+
+Future<void> main(List<String> arguments) async {
+
+  final parser = ArgParser()
+    ..addOption(
+      'config',
+      abbr: 'c',
+      help: 'Path to the config file',
+      defaultsTo: 'graphql_codegen.json',
+    )
+    ..addFlag(
+      'help',
+      abbr: 'h',
+      help: 'Show this help message',
+      negatable: false,
+    );
+
+  final args = parser.parse(arguments);
+
+  if (args['help'] as bool) {
+    print('''
+Usage: graphql_codegen generate [options]
+
+Options:
+${parser.usage}
+''');
+    exit(0);
+  }
+
+  final configPath = args['config'] as String;
+  final configFile = File(configPath);
+
+  if (!await configFile.exists()) {
+    stderr.writeln('❌ Config file not found at: $configPath');
+    exit(1);
+  }
+
+    final raw = await configFile.readAsString();
+    Map<String, dynamic> json;
+  try {
+    json = jsonDecode(raw) as Map<String, dynamic>;
+  } on FormatException catch (e) {
+    stderr.writeln('❌ Invalid JSON in $configPath: ${e.message}');
+    exit(1);
+  }
+
+  // 3) Parse into your config class
+  late GeneratorConfig config;
+  try {
+    config = GeneratorConfig.fromJson(json);
+  } catch (e) {
+    stderr.writeln('❌ Error parsing config: $e');
+    exit(1);
+  }
+  config.typeMappings ??= {
     "ID": "String",
     "String": "String",
     "Float": "Double",
@@ -21,17 +78,24 @@ void main() {
     "Boolean": "Boolean",
     "Null": "null"
   };
-  final grammar = GQGrammar(typeMap: map, mode: CodeGenerationMode.server);
+
+
+  
+  final grammar = GQGrammar(typeMap: config.typeMappings!, mode: CodeGenerationMode.server);
   var file = File(graphqlFile);
   var schema = file.readAsLinesSync().join("\n");
-  var parser = grammar.buildFrom(grammar.fullGrammar().end());
-  parser.parse(schema);
+  var gqParser = grammar.buildFrom(grammar.fullGrammar().end());
+  gqParser.parse(schema);
 
+  // lets generate some code!
+  generateClasses(grammar);
+  
+}
+
+void generateClasses(GQGrammar grammar) {
   final serialzer = JavaSerializer(grammar);
   final springSeriaalizer = SpringServerSerializer(grammar);
-  // lets generate some code!
-
-  grammar.getSerializableTypes().forEach((def) {
+grammar.getSerializableTypes().forEach((def) {
     var text = serialzer.serializeTypeDefinition(def);
     writeToFile(text, "${def.token}.java", "types", ["$packageName.enums", "$packageName.interfaces"]);
   });
