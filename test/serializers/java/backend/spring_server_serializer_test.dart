@@ -232,7 +232,6 @@ void main() {
     var carService = g.services["CarService"]!;
 
     var serializedCarService = serverSerialzer.serializeService(carService, injectDataFtechingEnv: true);
-    print(serializedCarService);
     expect(
         serializedCarService,
         stringContainsInOrder([

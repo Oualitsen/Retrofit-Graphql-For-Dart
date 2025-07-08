@@ -2,6 +2,7 @@ import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/gq_directive.dart';
 import 'package:retrofit_graphql/src/model/gq_enum_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
+import 'package:retrofit_graphql/src/model/gq_has_directives.dart';
 import 'package:retrofit_graphql/src/model/gq_input_type_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_type.dart';
 import 'package:retrofit_graphql/src/model/gq_type_definition.dart';
@@ -55,5 +56,12 @@ abstract class GqSerializer {
       return "";
     }
     return "${serializeListText(decorators, withParenthesis: false, join: " ")} ";
+  }
+
+  String? getTypeNameFromGQExternal(String type) {
+    Object? typeWithDirectives = grammar.types[type] ?? grammar.projectedTypes[type] ?? grammar.interfaces[type]
+     ?? grammar.inputs[type] ?? grammar.enums[type] ?? grammar.scalars[type];
+      typeWithDirectives = typeWithDirectives as GqHasDirectives?;
+     return typeWithDirectives?.getDirectiveByName(gqExternal)?.getArgValueAsString(gqExternalArg);
   }
 }
