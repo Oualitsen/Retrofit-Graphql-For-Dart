@@ -57,9 +57,7 @@ void main() {
 
     var serializer = SpringServerSerializer(g);
     var result = serializer.serializeRepository(userRepository);
-    print(result);
-
-    
+    expect(result, stringContainsInOrder(["java.util.List<com.mycompany.ExternalUser> findAll(final org.springframework.data.domain.Pageable pagebale);"]));
   });
 
 

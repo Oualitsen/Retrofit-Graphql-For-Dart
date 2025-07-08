@@ -62,6 +62,7 @@ ${def.values.map((e) => e.value).toList().join(", ").ident()}
       }
     }
     final token = gqType.token;
+    
     var type = getTypeNameFromGQExternal(token) ?? token;
     if (reactive) {
       return "reactor.core.publisher.Mono<$type>";

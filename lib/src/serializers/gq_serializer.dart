@@ -58,10 +58,16 @@ abstract class GqSerializer {
     return "${serializeListText(decorators, withParenthesis: false, join: " ")} ";
   }
 
-  String? getTypeNameFromGQExternal(String type) {
-    Object? typeWithDirectives = grammar.types[type] ?? grammar.projectedTypes[type] ?? grammar.interfaces[type]
-     ?? grammar.inputs[type] ?? grammar.enums[type] ?? grammar.scalars[type];
+  String? getTypeNameFromGQExternal(String token) {
+    Object? typeWithDirectives = grammar.types[token] ?? grammar.projectedTypes[token] ?? grammar.interfaces[token]
+     ?? grammar.inputs[token] ?? grammar.enums[token] ?? grammar.scalars[token];
       typeWithDirectives = typeWithDirectives as GqHasDirectives?;
-     return typeWithDirectives?.getDirectiveByName(gqExternal)?.getArgValueAsString(gqExternalArg);
+     var result = typeWithDirectives?.getDirectiveByName(gqExternal)?.getArgValueAsString(gqExternalArg);
+     if(result == null) {
+      // check on typeMap
+      return grammar.typeMap[token];
+     }
+     return result;
+
   }
 }
