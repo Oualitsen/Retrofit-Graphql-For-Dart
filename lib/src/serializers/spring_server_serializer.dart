@@ -11,8 +11,8 @@ import 'package:retrofit_graphql/src/model/gq_type.dart';
 import 'package:retrofit_graphql/src/serializers/java_serializer.dart';
 import 'package:retrofit_graphql/src/extensions.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
+import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 
-const gqFQCN = "gqFQCN";
 
 class SpringServerSerializer {
   final String? defaultRepositoryBase;

@@ -7,6 +7,7 @@ import 'package:retrofit_graphql/src/model/gq_input_type_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_type.dart';
 import 'package:retrofit_graphql/src/model/gq_type_definition.dart';
 import 'package:retrofit_graphql/src/utils.dart';
+import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 
 abstract class GqSerializer {
   final GQGrammar grammar;

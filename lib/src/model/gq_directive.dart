@@ -2,6 +2,7 @@ import 'package:retrofit_graphql/src/extensions.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/gq_argument.dart';
 import 'package:retrofit_graphql/src/model/gq_token.dart';
+import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 
 class GQDirectiveDefinition {
   final String name;

@@ -20,6 +20,7 @@ import 'package:retrofit_graphql/src/model/gq_union.dart';
 import 'package:retrofit_graphql/src/model/gq_queries.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
 import 'package:retrofit_graphql/src/utils.dart';
+import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 
 const String allFieldsFragmentsFileName = "allFieldsFragments";
 
