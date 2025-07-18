@@ -3,10 +3,15 @@ import 'package:retrofit_graphql/src/model/gq_directive.dart';
 import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
 
-mixin GqHasDirectives {
+mixin GqDirectivesMixin {
   List<GQDirectiveValue> getDirectives() {
-    return _directives.values.toList();
+    return [..._directives.values, ..._decorators];
   }
+  ///
+  /// We need to handle decorators differently as one field can have multiple
+  /// decorators comming from different other annotations.
+  ///
+  final _decorators = <GQDirectiveValue>[];
 
   final Map<String, GQDirectiveValue> _directives = {};
 
@@ -14,6 +19,7 @@ mixin GqHasDirectives {
     return getDirectives()
         .where((d) => d.getArgValue(gqAnnotation) == true)
         .where((d) {
+          
       switch (mode) {
         case CodeGenerationMode.client:
           return d.getArgValue(gqOnClient) == true;
@@ -26,6 +32,10 @@ mixin GqHasDirectives {
   }
 
   void addDirective(GQDirectiveValue directiveValue) {
+    if(directiveValue.token == gqDecorators) {
+      _decorators.add(directiveValue);
+      return;
+    }
     if (_directives.containsKey(directiveValue.token)) {
       throw ParseException(
           "Directive '${directiveValue.token}' already exists");

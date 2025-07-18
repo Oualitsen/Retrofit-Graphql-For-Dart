@@ -26,6 +26,7 @@ export 'package:retrofit_graphql/src/gq_grammar_extension.dart';
 
 
 class GQGrammar extends GrammarDefinition {
+  bool annotationsProcessed = false;
   var logger = Logger();
   static const typename = "__typename";
   static final typenameField =
@@ -382,8 +383,8 @@ class GQGrammar extends GrammarDefinition {
           directiveValueList(),
           seq3(
                   ref0(openBrace),
-                  seq2(ref1(token, documentation().optional()), ref1(token, identifier()))
-                      .map2((comment, value) => GQEnumValue(value: value, comment: comment))
+                  seq3(ref1(token, documentation().optional()), ref1(token, identifier()), directiveValueList())
+                      .map3((comment, value, directives) => GQEnumValue(value: value, comment: comment, directives: directives))
                       .plus(),
                   ref0(closeBrace))
               .map3((p0, list, p2) => list)).map3((identifier, directives, enumValues) {

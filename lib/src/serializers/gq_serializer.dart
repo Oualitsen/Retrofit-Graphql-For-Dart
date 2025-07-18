@@ -15,13 +15,22 @@ abstract class GqSerializer {
   GqSerializer(this.grammar);
 
   String serializeEnumDefinition(GQEnumDefinition def) {
-    if (grammar.shouldSkipSerialization(directives: def.directives)) {
+    if (grammar.shouldSkipSerialization(directives: def.getDirectives())) {
       return "";
     }
     return doSerializeEnumDefinition(def);
   }
 
+  String serialzeEnumValue(GQEnumValue value) {
+    if (grammar.shouldSkipSerialization(directives: value.getDirectives())) {
+      return "";
+    }
+    return doSerialzeEnumValue(value);
+  }
+
   String doSerializeEnumDefinition(GQEnumDefinition def);
+
+  String doSerialzeEnumValue(GQEnumValue value);
 
   String serializeField(GQField def) {
     if (grammar.shouldSkipSerialization(directives: def.getDirectives())) {
@@ -51,18 +60,18 @@ abstract class GqSerializer {
 
   String doSerializeTypeDefinition(GQTypeDefinition def);
 
-  String serializeDecorators(List<GQDirectiveValue> list) {
+  String serializeDecorators(List<GQDirectiveValue> list, {String joiner = "\n"}) {
     var decorators = GQGrammarExtension.extractDecorators(directives: list, mode: grammar.mode);
     if (decorators.isEmpty) {
       return "";
     }
-    return "${serializeListText(decorators, withParenthesis: false, join: " ")} ";
+    return "${serializeListText(decorators, withParenthesis: false, join: joiner)}$joiner";
   }
 
   String? getTypeNameFromGQExternal(String token) {
     Object? typeWithDirectives = grammar.types[token] ?? grammar.projectedTypes[token] ?? grammar.interfaces[token]
      ?? grammar.inputs[token] ?? grammar.enums[token] ?? grammar.scalars[token];
-      typeWithDirectives = typeWithDirectives as GqHasDirectives?;
+      typeWithDirectives = typeWithDirectives as GqDirectivesMixin?;
      var result = typeWithDirectives?.getDirectiveByName(gqExternal)?.getArgValueAsString(gqExternalArg);
      if(result == null) {
       // check on typeMap

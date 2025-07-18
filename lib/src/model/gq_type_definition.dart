@@ -5,7 +5,7 @@ import 'package:retrofit_graphql/src/model/gq_has_directives.dart';
 import 'package:retrofit_graphql/src/model/gq_token.dart';
 import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 
-class GQTypeDefinition extends GQTokenWithFields with GqHasDirectives {
+class GQTypeDefinition extends GQTokenWithFields with GqDirectivesMixin {
   final Set<String> interfaceNames;
   final bool nameDeclared;
   final GQTypeDefinition? derivedFromType;

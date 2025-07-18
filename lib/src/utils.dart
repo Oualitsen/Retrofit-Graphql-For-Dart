@@ -31,6 +31,13 @@ String serializeListText(List<String>? list, {String join = ",", bool withParent
   }
   return result.trim();
 }
+ String? getFqcnFromDirective(GQDirectiveValue value) {
+    var fqcn = value.getArgValueAsString(gqFQCN);
+    if (fqcn != null && !fqcn.startsWith("@")) {
+      fqcn = "@$fqcn";
+    }
+    return fqcn;
+  }
 
 String formatUnformattedGraphQL(String unformattedGraphQL) {
   const indentSize = 2;

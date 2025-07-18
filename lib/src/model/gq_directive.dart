@@ -43,9 +43,10 @@ enum GQDirectiveScope {
   // ignore: constant_identifier_names
   UNION,
   // ignore: constant_identifier_names
-  ENUM,
-  // ignore: constant_identifier_names
   ENUM_VALUE,
+  // ignore: constant_identifier_names
+  ENUM,
+  
   // ignore: constant_identifier_names
   INPUT_OBJECT,
   // ignore: constant_identifier_names
@@ -130,7 +131,8 @@ class GQDirectiveValue extends GQToken {
     return GQDirectiveValue(gqDecorators, [], [
       GQArgumentValue(
           "value", ["[[", decorators.map((s) => '"$s"').toList(), "]]"]),
-      GQArgumentValue("applyOnServer", true),
+      GQArgumentValue("applyOnServer", applyOnServer),
+      GQArgumentValue("applyOnClient", applyOnClient),
     ]);
   }
 }
