@@ -225,9 +225,6 @@ extension GQGrammarExtension on GQGrammar {
           queryType: queryType,
           identity: identityField == typeField,
         );
-        if (schemaMappings.serviceName == "CarService") {
-          print("Car service ");
-        }
         addSchemaMapping(schemaMappings);
       }
       type.getSkinOnClientFields().forEach((typeField) {
@@ -302,27 +299,27 @@ extension GQGrammarExtension on GQGrammar {
   }
 
   void addFragmentDefinition(GQFragmentDefinitionBase fragment) {
-    checkFragmentDefinition(fragment);
+    _checkFragmentDefinition(fragment);
     fragments[fragment.token] = fragment;
   }
 
   void addUnionDefinition(GQUnionDefinition union) {
-    checkUnitionDefinition(union);
+    _checkUnitionDefinition(union);
     unions[union.token] = union;
   }
 
   void addInputDefinition(GQInputDefinition input) {
-    checkInputDefinition(input);
+    _checkInputDefinition(input);
     inputs[input.token] = input;
   }
 
   void addTypeDefinition(GQTypeDefinition type) {
-    checkTypeDefinition(type);
+    _checkTypeDefinition(type);
     types[type.token] = type;
   }
 
   void addInterfaceDefinition(GQInterfaceDefinition interface) {
-    checkInterfaceDefinition(interface);
+    _checkInterfaceDefinition(interface);
     interfaces[interface.token] = interface;
   }
 
@@ -332,7 +329,7 @@ extension GQGrammarExtension on GQGrammar {
   }
 
   void addQueryDefinition(GQQueryDefinition definition) {
-    checkQueryDefinition(definition.token);
+    _checkQueryDefinition(definition.token);
     queries[definition.token] = definition;
   }
 
@@ -388,19 +385,19 @@ extension GQGrammarExtension on GQGrammar {
     }
   }
 
-  void checkInterfaceDefinition(GQInterfaceDefinition interface) {
+  void _checkInterfaceDefinition(GQInterfaceDefinition interface) {
     if (interfaces.containsKey(interface.token)) {
       throw ParseException("Interface ${interface.token} has already been declared");
     }
   }
 
-  void checkTypeDefinition(GQTypeDefinition type) {
+  void _checkTypeDefinition(GQTypeDefinition type) {
     if (types.containsKey(type.token)) {
       throw ParseException("Type ${type.token} has already been declared");
     }
   }
 
-  void checkIfDefined(String typeName) {
+  void _checkIfDefined(String typeName) {
     if (types.containsKey(typeName) ||
         interfaces.containsKey(typeName) ||
         enums.containsKey(typeName) ||
@@ -410,13 +407,13 @@ extension GQGrammarExtension on GQGrammar {
     throw ParseException("Type $typeName is not defined");
   }
 
-  void checkInputDefinition(GQInputDefinition input) {
+  void _checkInputDefinition(GQInputDefinition input) {
     if (inputs.containsKey(input.token)) {
       throw ParseException("Input ${input.token} has already been declared");
     }
   }
 
-  void checkUnitionDefinition(GQUnionDefinition union) {
+  void _checkUnitionDefinition(GQUnionDefinition union) {
     if (unions.containsKey(union.token)) {
       throw ParseException("Union ${union.token} has already been declared");
     }
@@ -431,19 +428,19 @@ extension GQGrammarExtension on GQGrammar {
     });
   }
 
-  void checkFragmentDefinition(GQFragmentDefinitionBase fragment) {
+  void _checkFragmentDefinition(GQFragmentDefinitionBase fragment) {
     if (fragments.containsKey(fragment.token)) {
       throw ParseException("Fragment ${fragment.token} has already been declared");
     }
   }
 
-  void checkQueryDefinition(String token) {
+  void _checkQueryDefinition(String token) {
     if (queries.containsKey(token)) {
       throw ParseException("Query $token has already been declared");
     }
   }
 
-  void checkType(String name) {
+  void _checkType(String name) {
     bool b = scalars.containsKey(name) ||
         unions.containsKey(name) ||
         types.containsKey(name) ||
@@ -455,13 +452,13 @@ extension GQGrammarExtension on GQGrammar {
     }
   }
 
-  void checkInput(String inputName) {
+  void _checkInput(String inputName) {
     if (!inputs.containsKey(inputName)) {
       throw ParseException("Input $inputName undefined");
     }
   }
 
-  void checkInterface(String interface) {
+  void _checkInterface(String interface) {
     if (!interfaces.containsKey(interface)) {
       throw ParseException("Interface $interface undefined");
     }
@@ -475,7 +472,7 @@ extension GQGrammarExtension on GQGrammar {
     this.schema = schema;
   }
 
-  void checkScalar(String scalarName) {
+  void _checkScalar(String scalarName) {
     if (!scalars.containsKey(scalarName)) {
       throw ParseException("Scalar $scalarName was not declared");
     }
@@ -578,7 +575,7 @@ extension GQGrammarExtension on GQGrammar {
   }
 
   bool fieldRequiresProjection(String fieldName, String onTypeName) {
-    checkIfDefined(onTypeName);
+    _checkIfDefined(onTypeName);
     GQType type = getFieldType(fieldName, onTypeName);
     return typeRequiresProjection(type);
   }
@@ -701,7 +698,7 @@ extension GQGrammarExtension on GQGrammar {
 
   void fillTypedFragments() {
     fragments.forEach((key, fragment) {
-      checkIfDefined(fragment.onTypeName);
+      _checkIfDefined(fragment.onTypeName);
       typedFragments[key] = GQTypedFragment(fragment, getType(fragment.onTypeName));
     });
   }
