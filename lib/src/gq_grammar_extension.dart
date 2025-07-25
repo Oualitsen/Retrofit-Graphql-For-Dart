@@ -5,13 +5,9 @@ import 'package:retrofit_graphql/src/model/gq_argument.dart';
 import 'package:retrofit_graphql/src/model/gq_directive.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
 import 'package:retrofit_graphql/src/model/gq_has_directives.dart';
-import 'package:retrofit_graphql/src/model/gq_scalar_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_service.dart';
 import 'package:retrofit_graphql/src/model/gq_shcema_mapping.dart';
-import 'package:retrofit_graphql/src/model/gq_schema.dart';
-import 'package:retrofit_graphql/src/model/gq_enum_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_fragment.dart';
-import 'package:retrofit_graphql/src/model/gq_input_type_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_interface.dart';
 import 'package:retrofit_graphql/src/model/gq_token.dart';
 import 'package:retrofit_graphql/src/model/gq_type.dart';
@@ -276,62 +272,6 @@ extension GQGrammarExtension on GQGrammar {
     directiveValues.add(value);
   }
 
-  void addScalarDefinition(GQScalarDefinition scalar) {
-    checkSacalarDefinition(scalar);
-    scalars[scalar.token] = scalar;
-  }
-
-  void addDirectiveDefinition(GQDirectiveDefinition directive) {
-    checkDirectiveDefinition(directive.name);
-    directiveDefinitions[directive.name] = directive;
-  }
-
-  void checkSacalarDefinition(GQScalarDefinition scalar) {
-    if (scalars.containsKey(scalar.token)) {
-      throw ParseException("Scalar $scalar has already been declared");
-    }
-  }
-
-  void checkDirectiveDefinition(String name) {
-    if (directiveDefinitions.containsKey(name)) {
-      throw ParseException("Directive $name has already been declared");
-    }
-  }
-
-  void addFragmentDefinition(GQFragmentDefinitionBase fragment) {
-    _checkFragmentDefinition(fragment);
-    fragments[fragment.token] = fragment;
-  }
-
-  void addUnionDefinition(GQUnionDefinition union) {
-    _checkUnitionDefinition(union);
-    unions[union.token] = union;
-  }
-
-  void addInputDefinition(GQInputDefinition input) {
-    _checkInputDefinition(input);
-    inputs[input.token] = input;
-  }
-
-  void addTypeDefinition(GQTypeDefinition type) {
-    _checkTypeDefinition(type);
-    types[type.token] = type;
-  }
-
-  void addInterfaceDefinition(GQInterfaceDefinition interface) {
-    _checkInterfaceDefinition(interface);
-    interfaces[interface.token] = interface;
-  }
-
-  void addEnumDefinition(GQEnumDefinition enumDefinition) {
-    checmEnumDefinition(enumDefinition);
-    enums[enumDefinition.token] = enumDefinition;
-  }
-
-  void addQueryDefinition(GQQueryDefinition definition) {
-    _checkQueryDefinition(definition.token);
-    queries[definition.token] = definition;
-  }
 
   void addQueryDefinitionSkipIfExists(GQQueryDefinition definition) {
     if (queries.containsKey(definition.token)) {
@@ -351,7 +291,7 @@ extension GQGrammarExtension on GQGrammar {
           parentNames: {},
           directives: [],
           interfaceNames: {});
-      addInterfaceDefinition(interfaceDef);
+     step1. addInterfaceDefinition(interfaceDef);
 
       for (var typeName in union.typeNames) {
         var type = getType(typeName);
@@ -379,23 +319,9 @@ extension GQGrammarExtension on GQGrammar {
     });
   }
 
-  void checmEnumDefinition(GQEnumDefinition enumDefinition) {
-    if (enums.containsKey(enumDefinition.token)) {
-      throw ParseException("Enum ${enumDefinition.token} has already been declared");
-    }
-  }
 
-  void _checkInterfaceDefinition(GQInterfaceDefinition interface) {
-    if (interfaces.containsKey(interface.token)) {
-      throw ParseException("Interface ${interface.token} has already been declared");
-    }
-  }
 
-  void _checkTypeDefinition(GQTypeDefinition type) {
-    if (types.containsKey(type.token)) {
-      throw ParseException("Type ${type.token} has already been declared");
-    }
-  }
+ 
 
   void _checkIfDefined(String typeName) {
     if (types.containsKey(typeName) ||
@@ -407,17 +333,6 @@ extension GQGrammarExtension on GQGrammar {
     throw ParseException("Type $typeName is not defined");
   }
 
-  void _checkInputDefinition(GQInputDefinition input) {
-    if (inputs.containsKey(input.token)) {
-      throw ParseException("Input ${input.token} has already been declared");
-    }
-  }
-
-  void _checkUnitionDefinition(GQUnionDefinition union) {
-    if (unions.containsKey(union.token)) {
-      throw ParseException("Union ${union.token} has already been declared");
-    }
-  }
 
   void checkFragmentRefs() {
     fragments.forEach((key, typedFragment) {
@@ -426,56 +341,6 @@ extension GQGrammarExtension on GQGrammar {
         getFragment(ref.fragmentName!, typedFragment.onTypeName);
       }
     });
-  }
-
-  void _checkFragmentDefinition(GQFragmentDefinitionBase fragment) {
-    if (fragments.containsKey(fragment.token)) {
-      throw ParseException("Fragment ${fragment.token} has already been declared");
-    }
-  }
-
-  void _checkQueryDefinition(String token) {
-    if (queries.containsKey(token)) {
-      throw ParseException("Query $token has already been declared");
-    }
-  }
-
-  void _checkType(String name) {
-    bool b = scalars.containsKey(name) ||
-        unions.containsKey(name) ||
-        types.containsKey(name) ||
-        inputs.containsKey(name) ||
-        interfaces.containsKey(name) ||
-        enums.containsKey(name);
-    if (!b) {
-      throw ParseException("Type $name undefined");
-    }
-  }
-
-  void _checkInput(String inputName) {
-    if (!inputs.containsKey(inputName)) {
-      throw ParseException("Input $inputName undefined");
-    }
-  }
-
-  void _checkInterface(String interface) {
-    if (!interfaces.containsKey(interface)) {
-      throw ParseException("Interface $interface undefined");
-    }
-  }
-
-  void defineSchema(GQSchema schema) {
-    if (schemaInitialized) {
-      throw ParseException("A schema has already been defined");
-    }
-    schemaInitialized = true;
-    this.schema = schema;
-  }
-
-  void _checkScalar(String scalarName) {
-    if (!scalars.containsKey(scalarName)) {
-      throw ParseException("Scalar $scalarName was not declared");
-    }
   }
 
   void validateProjections() {

@@ -140,9 +140,12 @@ void main() {
 
   test("Fragment Definitions 2", () {
     final GQGrammar g = GQGrammar();
-    var parser = g.buildFrom(g.fragmentDefinition().end());
+    var parser = g.buildFrom(g.fullGrammar().end());
     parser.parse('''
-        
+        type Product {
+          id: String
+          name: String
+        }
        fragment ProductFields  on Product {
           myAliassedId:id  name 
       }

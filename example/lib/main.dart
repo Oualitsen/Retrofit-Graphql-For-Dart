@@ -1,7 +1,8 @@
-import 'package:retrofit_graphql_example/generated/client.gq.dart';
+//import 'package:retrofit_graphql_example/generated/client.gq.dart';
 import 'package:http/http.dart' as http;
 
 void main(List<String> args) {
+/*
   const wsUrl = "ws://localhost:8080/graphql";
   const url = "http://localhost:8080/graphql";
   var wsAdapter = WebSocketChannelAdapter(wsUrl);
@@ -16,7 +17,6 @@ void main(List<String> args) {
    GQClient(fn, wsAdapter);
   
   // client.queries.getDriver3().then((value) => value.data);
-/*
 
   client.queries
       .getUser(id: "test", client: true)
