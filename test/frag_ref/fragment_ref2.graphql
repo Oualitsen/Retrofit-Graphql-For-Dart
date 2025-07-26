@@ -1,0 +1,26 @@
+type Product {
+    name: String!
+    make: String!
+    model: String!
+    exppiryDate: String
+}
+
+
+
+
+type Query {
+    getProduct: Product
+}
+
+
+
+query getProduct {
+    getProduct {
+         ... on Product {
+            name make model
+         }
+    }
+}
+
+
+

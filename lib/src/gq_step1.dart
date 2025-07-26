@@ -133,4 +133,8 @@ class GqStep1 {
   void checkFragmentExistance() {
     // do nothing
   }
+
+  void checkTypeExistance(String id) {
+    // do nothing here
+  }
 }

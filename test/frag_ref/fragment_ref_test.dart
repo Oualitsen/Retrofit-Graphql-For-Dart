@@ -20,4 +20,17 @@ void main() async {
     var variant = g.types['Variant']!;
     expect(variant.fieldNames, containsAll(["make", "name", "model"]));
   });
+
+
+  test("fragment reference#######", () {
+    final text = File("test/frag_ref/fragment_ref2.graphql").readAsStringSync();
+    final GQGrammar g = GQGrammar(generateAllFieldsFragments: true);
+    var parser = g.buildFrom(g.fullGrammar().end());
+    var parsed = parser.parse(text);
+    expect(parsed is Success, true);
+    print("DONE");
+
+  });
+
+  
 }
