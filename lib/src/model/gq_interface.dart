@@ -17,10 +17,5 @@ class GQInterfaceDefinition extends GQTypeDefinition {
   String toString() {
     return 'GraphQLInterface{name: $token, fields: $fields, parenNames:$parentNames}';
   }
-
-  @override
-  String serialize() {
-    throw UnimplementedError();
-  }
   
 }

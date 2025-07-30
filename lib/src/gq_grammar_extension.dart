@@ -225,9 +225,7 @@ extension GQGrammarExtension on GQGrammar {
           queryType: queryType,
           identity: identityField == typeField,
         );
-        if (schemaMappings.serviceName == "CarService") {
-          print("Car service ");
-        }
+       
         addSchemaMapping(schemaMappings);
       }
       type.getSkinOnClientFields().forEach((typeField) {
@@ -972,7 +970,7 @@ extension GQGrammarExtension on GQGrammar {
           return type;
         } else {
           throw ParseException(
-              "You have names two object the same name '${definition.token}' but have diffrent fields. ${definition.token}_1.fields are: [${type.fields.map((f) => "${f.name}: ${f.type.serialize()}").toList()}], ${definition.token}_2.fields are: [${definition.fields.map((f) => "${f.name}: ${f.type.serialize()}").toList()}]. Please consider renaming one of them");
+              "You have names two object the same name '${definition.token}' but have diffrent fields. ${definition.token}_1.fields are: [${type.fields.map((f) => "${f.name}: ${serializer.serializeType(f.type)}").toList()}], ${definition.token}_2.fields are: [${definition.fields.map((f) => "${f.name}: ${serializer.serializeType(f.type)}").toList()}]. Please consider renaming one of them");
         }
       }
     }

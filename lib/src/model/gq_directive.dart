@@ -1,5 +1,4 @@
 import 'package:retrofit_graphql/src/extensions.dart';
-import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/gq_argument.dart';
 import 'package:retrofit_graphql/src/model/gq_token.dart';
 import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
@@ -99,19 +98,6 @@ class GQDirectiveValue extends GQToken {
 
   void addArg(String name, Object? value) {
     _argsMap[name] = GQArgumentValue(name, value);
-  }
-
-  @override
-  String serialize() {
-    //don't serialize the gqTypeName directive
-    if (GQGrammar.directivesToSkip.contains(token)) {
-      return "";
-    }
-    var arguments = getArguments();
-    var args = arguments.isEmpty
-        ? ""
-        : "(${arguments.map((e) => e.serialize()).join(",")})";
-    return "$token$args";
   }
 
   List<GQArgumentValue> getArguments() {

@@ -6,7 +6,6 @@ import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 abstract class GQToken {
   final String token;
   GQToken(this.token);
-  String serialize();
 }
 
 abstract class GQTokenWithFields extends GQToken {
