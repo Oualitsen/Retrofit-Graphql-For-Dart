@@ -50,10 +50,10 @@ abstract class GQTokenWithFields extends GQToken {
     return _fieldNames;
   }
 
-  List<GQField> getSerializableFields(GQGrammar grammar) {
+  List<GQField> getSerializableFields(GQGrammar grammar, {bool skipGenerated = false}) {
     if (_serializableFields.isEmpty) {
       _serializableFields
-          .addAll(fields.where((f) => !grammar.shouldSkipSerialization(directives: f.getDirectives())));
+          .addAll(fields.where((f) => !grammar.shouldSkipSerialization(directives: f.getDirectives(skipGenerated: skipGenerated))));
     }
     return _serializableFields;
   }

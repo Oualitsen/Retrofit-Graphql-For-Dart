@@ -17,7 +17,7 @@ void main() {
     final GQGrammar g = GQGrammar();
     final serialzer = GraphqSerializer(g);
     var union = GQUnionDefinition("type", ["User", "Client"]);
-    expect(serialzer.serializeUnionDefinition(union), "union type = User|Client");
+    expect(serialzer.serializeUnionDefinition(union), "union type = User | Client");
   });
 
   test("Parse union", () {

@@ -3,6 +3,7 @@ import 'package:retrofit_graphql/src/model/gq_type_definition.dart';
 class GQInterfaceDefinition extends GQTypeDefinition {
   final Set<GQInterfaceDefinition> parents = <GQInterfaceDefinition>{};
   final Set<String> parentNames;
+  final bool fromUnion;
 
   GQInterfaceDefinition({
     required super.name,
@@ -11,6 +12,7 @@ class GQInterfaceDefinition extends GQTypeDefinition {
     required this.parentNames,
     required super.directives,
     required super.interfaceNames,
+    this.fromUnion = false,
   }) : super(derivedFromType: null);
 
   @override

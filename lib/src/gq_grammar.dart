@@ -172,9 +172,9 @@ class GQGrammar extends GrammarDefinition {
 
   Parser fullGrammar() => (documentation().optional() &
               [
+                schemaDefinition(),
                 scalarDefinition(),
                 directiveDefinition(),
-                schemaDefinition(),
                 inputDefinition(),
                 typeDefinition(),
                 interfaceDefinition(),
@@ -433,17 +433,14 @@ class GQGrammar extends GrammarDefinition {
   Parser<List<GQDirectiveValue>> directiveValueList() => directiveValue().star();
 
   Parser<GQDirectiveValue> directiveValue() => seq2(directiveValueName(), argumentValues().optional())
-          .map2((name, args) => GQDirectiveValue(name.trim(), [], args ?? []))
+          .map2((name, args) => GQDirectiveValue(name.trim(), [], args ?? [], generated: false))
           .map((directiveValue) {
         addDiectiveValue(directiveValue);
         return directiveValue;
       });
 
   Parser<String> directiveValueName() => ref1(token, (ref0(at) & identifier()))
-      .map((list) => "${list.first}${list.last}").map((e) {
-        print("e = [$e]");
-        return e;
-      });
+      .map((list) => "${list.first}${list.last}");
 
   Parser<GQDirectiveDefinition> directiveDefinition() => seq3(
               seq2(

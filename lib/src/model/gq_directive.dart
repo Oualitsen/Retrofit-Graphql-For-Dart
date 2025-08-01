@@ -58,9 +58,13 @@ enum GQDirectiveScope {
 class GQDirectiveValue extends GQToken {
   final List<GQDirectiveScope> locations;
   final Map<String, GQArgumentValue> _argsMap = {};
+  ///
+  /// helps with the schema serialization
+  ///
+  final bool generated;
 
   GQDirectiveValue(
-      super.name, this.locations, List<GQArgumentValue> arguments) {
+      super.name, this.locations, List<GQArgumentValue> arguments, {required this.generated}) {
     _addArgument(arguments);
   }
 
@@ -105,8 +109,8 @@ class GQDirectiveValue extends GQToken {
   }
 
   static GQDirectiveValue createDirectiveValue(
-      {required String directiveName}) {
-    return GQDirectiveValue(directiveName, [], []);
+      {required String directiveName, required bool generated}) {
+    return GQDirectiveValue(directiveName, [], [], generated: generated);
   }
 
   static GQDirectiveValue createGqDecorators({
@@ -119,6 +123,7 @@ class GQDirectiveValue extends GQToken {
           "value", ["[[", decorators.map((s) => '"$s"').toList(), "]]"]),
       GQArgumentValue("applyOnServer", applyOnServer),
       GQArgumentValue("applyOnClient", applyOnClient),
-    ]);
+      
+    ], generated: true);
   }
 }

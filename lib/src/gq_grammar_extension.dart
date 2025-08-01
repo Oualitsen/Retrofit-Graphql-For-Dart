@@ -82,8 +82,8 @@ extension GQGrammarExtension on GQGrammar {
         .map((f) => f as GqDirectivesMixin)
         .where((t) => t.getDirectiveByName(gqExternal) != null)
         .forEach((f) {
-      f.addDirectiveIfAbsent(GQDirectiveValue.createDirectiveValue(directiveName: gqSkipOnClient));
-      f.addDirectiveIfAbsent(GQDirectiveValue.createDirectiveValue(directiveName: gqSkipOnServer));
+      f.addDirectiveIfAbsent(GQDirectiveValue.createDirectiveValue(directiveName: gqSkipOnClient, generated: true));
+      f.addDirectiveIfAbsent(GQDirectiveValue.createDirectiveValue(directiveName: gqSkipOnServer, generated: true));
     });
   }
 
@@ -102,7 +102,7 @@ extension GQGrammarExtension on GQGrammar {
   void skipFieldOfSkipOnServerTypes() {
     types.values.where((t) => t.getDirectiveByName(gqSkipOnServer) != null).forEach((t) {
       for (var f in t.fields) {
-        f.addDirectiveIfAbsent(t.getDirectiveByName(gqSkipOnServer)!);
+        f.addDirectiveIfAbsent(GQDirectiveValue.createDirectiveValue(directiveName: gqSkipOnServer, generated: true));
       }
     });
   }
@@ -398,7 +398,8 @@ extension GQGrammarExtension on GQGrammar {
           fields: [],
           parentNames: {},
           directives: [],
-          interfaceNames: {});
+          interfaceNames: {},
+          fromUnion: true);
       addInterfaceDefinition(interfaceDef);
 
       for (var typeName in union.typeNames) {
@@ -1246,6 +1247,11 @@ extension GQGrammarExtension on GQGrammar {
     var skipOnList = directives.where((d) => d.token == token).toList();
     return skipOnList.isNotEmpty;
   }
+
+   List<T> filterSerialization<T extends GqDirectivesMixin>(Iterable<T> list) {
+      return list.where((element) => !shouldSkipSerialization(directives: element.getDirectives()))
+      .toList();
+   }
 }
 
 class GeneratedTypeName {

@@ -3,7 +3,7 @@
 directive @gqServiceName(name: String) on FIELD_DEFINITION
 directive @gqSkipOnServer(mapTo: String) on FIELD_DEFINITION|OBJECT
 directive @gqSkipOnClient on FIELD_DEFINITION|OBJECT
-directive @gqDecorators(value: [String!]!, applyOnClient: Boolean! = false, applyOnServer: Boolean! = true) on FIELD_DEFINITION|OBJECT|INTERFACE
+directive @gqDecorators(value: [String!]!, applyOnClient: Boolean! = false, applyOnServer: Boolean! = true) on FIELD_DEFINITION | OBJECT | INTERFACE |ARGUMENT_DEFINITION |ENUM |ENUM_VALUE |FIELD|INPUT_FIELD_DEFINITION|QUERY|UNION|FRAGMENT_DEFINITION|FRAGMENT_SPREAD|INLINE_FRAGMENT|INPUT_OBJECT|MUTATION|SCALAR|SCHEMA|SUBSCRIPTION|VARIABLE_DEFINITION
 directive @gqEqualsHashcode(fields: [String!]!) on OBJECT
 directive @Document(
     value: String!,
@@ -38,16 +38,6 @@ directive @Query(
     gqOnClient: Boolean = false
     gqOnServer: Boolean = true
 
-) on FIELD_DEFINITION
-
-directive @gqQuery(
-    value: String
-    count: Boolean
-    exists: Boolean
-    delete: Boolean
-    fields: String
-    sort: String
-    gqFQCN: String = "org.springframework.data.mongodb.repository.Query"
 ) on FIELD_DEFINITION
 
 directive @gqRepository(
@@ -1152,6 +1142,8 @@ type Favorite implements BasicEntity @FieldNameConstants  {
     favoriteId: String!
     type: FavoriteType!
 }
+
+union Union1 = Favorite | Ban | Term
 
 ##### end google places ##########
 
