@@ -205,6 +205,7 @@ class GQGrammar extends GrammarDefinition {
     validateInputReferences();
     validateTypeReferences();
     convertUnionsToInterfaces();
+    fillInterfaceSubtypes();
     setDirectivesDefaulValues();
     updateInterfaceParents();
     handleDirectiveInheritance();
