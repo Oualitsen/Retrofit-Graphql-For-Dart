@@ -31,11 +31,11 @@ void main() {
     var javaSerial = JavaSerializer(g, inputsAsRecords: true, typesAsRecords: true);
     var input = g.inputs["PersonInput"]!;
     var inputSerial = javaSerial.serializeInputDefinition(input);
-    expect(inputSerial.trim(), "public record PersonInput (String name, Integer age) {}");
+    expect(inputSerial.split("\n").map((e) => e.trim(),).toList(), containsAllInOrder (["public record PersonInput (String name, Integer age) {"]));
 
     var type = g.getType("Person");
     var typeSerial = javaSerial.serializeTypeDefinition(type);
-    expect(typeSerial.trim(), "public record Person (String name, Integer age, Boolean married) {}");
+    expect(typeSerial.split("\n").map((e) => e.trim(),).toList(), containsAllInOrder (["public record Person (String name, Integer age, Boolean married) {"]));
   });
 
   test("input and type serialization as records with decorators", () {

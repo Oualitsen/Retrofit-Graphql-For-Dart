@@ -7,6 +7,10 @@ import 'package:test/test.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:petitparser/petitparser.dart';
 
+void saveToFile(String data, String fileName) {
+  File(fileName).writeAsStringSync(data);
+}
+
 void main() {
   test("Java enum to json", () {
     final GQGrammar g = GQGrammar(
@@ -132,14 +136,16 @@ ${serializer.serializeEnumDefinition(g.enums['Gender']!)}
     var serializer = JavaSerializer(g);
     var inputSerial = serializer.doSerializeInputDefinition(userInput);
 
+    print(inputSerial);
+
     expect(
       inputSerial.split('\n').map((e) => e.trim()),
       containsAllInOrder([
         'public java.util.Map<String, Object> toJson() {',
         'java.util.Map<String, Object> map = new java.util.HashMap<>();',
-        'map.put("names", names == null ? null : java.util.stream.Stream.of(names).map(e0 -> e0).toArray());',
-        'map.put("genderList", genderList == null ? null : java.util.stream.Stream.of(genderList).map(e0 -> java.util.Optional.ofNullable(e0).map((e) -> e.toJson()).orElse(null)).toArray());',
-        'map.put("genderList2", genderList2 == null ? null : java.util.stream.Stream.of(genderList2).map(e0 -> e0 == null ? null : java.util.stream.Stream.of(e0).map(e1 -> e1.toJson()).toArray()).toArray());',
+        'map.put("names", names == null ? null : java.util.stream.Stream.of(names).map(e0 -> e0).collect(java.util.stream.Collectors.toList()));',
+        'map.put("genderList", genderList == null ? null : java.util.stream.Stream.of(genderList).map(e0 -> java.util.Optional.ofNullable(e0).map((e) -> e.toJson()).orElse(null)).collect(java.util.stream.Collectors.toList()));',
+        'map.put("genderList2", genderList2 == null ? null : java.util.stream.Stream.of(genderList2).map(e0 -> e0 == null ? null : java.util.stream.Stream.of(e0).map(e1 -> e1.toJson()).collect(java.util.stream.Collectors.toList()));).collect(java.util.stream.Collectors.toList()));',
         'return map;',
         '}'
       ]),
@@ -204,144 +210,300 @@ ${serializer.serializeEnumDefinition(g.enums['Gender']!)}
     var serializer = JavaSerializer(g);
     var userSerial = serializer.doSerializeTypeDefinition(useer);
 
-
     // same as input, so we only check for the existance of toJson method
     expect(
       userSerial.split("\n").map((e) => e.trim()),
       containsAllInOrder([
-       'public java.util.Map<String, Object> toJson() {',
+        'public java.util.Map<String, Object> toJson() {',
         'java.util.Map<String, Object> map = new java.util.HashMap<>();',
         "}"
       ]),
     );
   });
 
-  test("Java input fromJson", () {
-    final GQGrammar g = GQGrammar(
-        generateAllFieldsFragments: false, autoGenerateQueries: false);
+  test("Java input fromJson nullable string", () {
+    final GQGrammar g = GQGrammar();
 
     var parsed = g.parse('''
-  scalar Long
-  enum Gender {male, female}
-  input CityInput {
-    name: String!
-  }
   input UserInput {
-    id: ID
-    name: String!
-    middleName: String
-    dateOfBirth: Long
-    price: Float
-    gender: Gender
-  #  gender2: Gender!
-  #  genders1: [Gender]
-  #  genders2: [Gender!]!
-  #  genders3: [Gender]!
-  #  city: CityInput
-  #  cities: [CityInput]
-  #  doubleCities: [[CityInput]]
+    name: String
   }
 ''');
-
     expect(parsed is Success, true);
     var userInput = g.inputs["UserInput"]!;
+
     var serializer = JavaSerializer(g);
-    var inputSerial = serializer.doSerializeInputDefinition(userInput);
-    print(inputSerial);
-     var fileName = "test/java/json/test.java";
-    File(fileName).writeAsStringSync('''
-${inputSerial}
-${serializer.serializeEnumDefinition(g.enums["Gender"]!)}
-${serializer.serializeInputDefinition(g.inputs["CityInput"]!)}
-''');
-return;
+    var fromJson = serializer.generateFromJson(
+        userInput.getSerializableFields(g.mode), "UserInput");
+
     expect(
-      inputSerial.split("\n").map((e) => e.trim()),
-      containsAllInOrder([
-        "static UserInput fromJson(Map<String, dynamic> json) {",
-        "return UserInput(",
-        "id: json['id'] as String?,",
-        "name: json['name'] as String,",
-        "middleName: json['middleName'] as String?,",
-        "dateOfBirth: json['dateOfBirth'] as int?,",
-        "price: (json['price'] as num?)?.toDouble(),",
-        "gender: json['gender'] == null ? null : Gender.fromJson(json['gender'] as String),",
-        "gender2: Gender.fromJson(json['gender2'] as String),",
-        "genders1: (json['genders1'] as List<dynamic>?)?.map((e0) => e0 == null ? null : Gender.fromJson(e0 as String)).toList(),",
-        "genders2: (json['genders2'] as List<dynamic>).map((e0) => Gender.fromJson(e0 as String)).toList(),",
-        "genders3: (json['genders3'] as List<dynamic>).map((e0) => e0 == null ? null : Gender.fromJson(e0 as String)).toList(),",
-        "city: json['city'] == null ? null : CityInput.fromJson(json['city'] as Map<String, dynamic>),",
-        "cities: (json['cities'] as List<dynamic>?)?.map((e0) => e0 == null ? null : CityInput.fromJson(e0 as Map<String, dynamic>)).toList(),",
-        "doubleCities: (json['doubleCities'] as List<dynamic>?)?.map((e0) => (e0 as List<dynamic>?)?.map((e1) => e1 == null ? null : CityInput.fromJson(e1 as Map<String, dynamic>)).toList()).toList()",
-        ");",
-        "}"
-      ]),
-    );
+        fromJson.split("\n").map((e) => e.trim()),
+        containsAllInOrder([
+          'public static UserInput fromJson(java.util.Map<String, Object> json) {',
+          'return new UserInput(',
+          'json.get("name") == null ? null : (String)json.get("name")',
+          ');',
+          "}"
+        ]));
   });
 
-  test("Java type fromJson", () {
-    final GQGrammar g = GQGrammar(
-        generateAllFieldsFragments: false, autoGenerateQueries: false);
+  test("Java input fromJson non nullable string", () {
+    final GQGrammar g = GQGrammar();
 
     var parsed = g.parse('''
-  scalar Long
-  enum Gender {male, female}
-  type City {
+  input UserInput {
     name: String!
-  }
-  type User {
-    id: ID
-    name: String!
-    middleName: String
-    dateOfBirth: Long
-  #  price: Float
-  #  gender: Gender
-  #  gender2: Gender!
-  #  genders1: [Gender]
-  #  genders2: [Gender!]!
-  #  genders3: [Gender]!
-  #  city: City
-  #  cities: [City]
-  #  doubleCities: [[City]]
   }
 ''');
     expect(parsed is Success, true);
-    var user = g.types["User"]!;
-    var serializer = DartSerializer(g);
-    var userSerial = serializer.doSerializeTypeDefinition(user);
-    var gender = g.enums["Gender"]!;
-    print(userSerial);
-    var fileName = "test/java/json/test.dart";
-    File(fileName).writeAsStringSync('''
-${userSerial}
-${serializer.serializeEnumDefinition(gender)}
-${serializer.serializeTypeDefinition(g.types["City"]!)}
-''');
+    var userInput = g.inputs["UserInput"]!;
 
-return;
+    var serializer = JavaSerializer(g);
+    var fromJson = serializer.generateFromJson(
+        userInput.getSerializableFields(g.mode), "UserInput");
+
     expect(
-      userSerial.split("\n").map((e) => e.trim()),
-      containsAllInOrder([
-        "static User fromJson(Map<String, dynamic> json) {",
-        "return User(",
-        "id: json['id'] as String?,",
-        "name: json['name'] as String,",
-        "middleName: json['middleName'] as String?,",
-        "dateOfBirth: json['dateOfBirth'] as int?,",
-        "price: (json['price'] as num?)?.toDouble(),",
-        "gender: json['gender'] == null ? null : Gender.fromJson(json['gender'] as String),",
-        "gender2: Gender.fromJson(json['gender2'] as String),",
-        "genders1: (json['genders1'] as List<dynamic>?)?.map((e0) => e0 == null ? null : Gender.fromJson(e0 as String)).toList(),",
-        "genders2: (json['genders2'] as List<dynamic>).map((e0) => Gender.fromJson(e0 as String)).toList(),",
-        "genders3: (json['genders3'] as List<dynamic>).map((e0) => e0 == null ? null : Gender.fromJson(e0 as String)).toList(),",
-        "city: json['city'] == null ? null : City.fromJson(json['city'] as Map<String, dynamic>),",
-        "cities: (json['cities'] as List<dynamic>?)?.map((e0) => e0 == null ? null : City.fromJson(e0 as Map<String, dynamic>)).toList(),",
-        "doubleCities: (json['doubleCities'] as List<dynamic>?)?.map((e0) => (e0 as List<dynamic>?)?.map((e1) => e1 == null ? null : City.fromJson(e1 as Map<String, dynamic>)).toList()).toList()",
-        ");",
-        "}"
-      ]),
-    );
+        fromJson.split("\n").map((e) => e.trim()),
+        containsAllInOrder([
+          'public static UserInput fromJson(java.util.Map<String, Object> json) {',
+          'return new UserInput(',
+          '(String)json.get("name")',
+          ');',
+          "}"
+        ]));
   });
+
+
+
+  test("Java input fromJson list of  nonnullable string", () {
+    final GQGrammar g = GQGrammar();
+
+    var parsed = g.parse('''
+  input UserInput {
+    name: [String!]!
+  }
+''');
+    expect(parsed is Success, true);
+    var userInput = g.inputs["UserInput"]!;
+
+    var serializer = JavaSerializer(g);
+    var fromJson = serializer.generateFromJson(
+        userInput.getSerializableFields(g.mode), "UserInput");
+
+    expect(
+        fromJson.split("\n").map((e) => e.trim()),
+        containsAllInOrder([
+          'public static UserInput fromJson(java.util.Map<String, Object> json) {',
+          'return new UserInput(',
+          '((java.util.List<Object>)json.get("name")).stream().map(json0 -> (String)json0).collect(java.util.stream.Collectors.toList())',
+          ');',
+          "}"
+        ]));
+  });
+
+  test("Java input fromJson number", () {
+    final GQGrammar g = GQGrammar();
+
+    var parsed = g.parse('''
+  input UserInput {
+    age: Int!
+  }
+''');
+    expect(parsed is Success, true);
+    var userInput = g.inputs["UserInput"]!;
+
+    var serializer = JavaSerializer(g);
+    var fromJson = serializer.generateFromJson(
+        userInput.getSerializableFields(g.mode), "UserInput");
+
+    expect(
+        fromJson.split("\n").map((e) => e.trim()),
+        containsAllInOrder([
+          'public static UserInput fromJson(java.util.Map<String, Object> json) {',
+          'return new UserInput(',
+          '((Number)json.get("age")).intValue()',
+          ');',
+          "}"
+        ]));
+  });
+
+
+  test("Java input fromJson list of numbers", () {
+    final GQGrammar g = GQGrammar();
+
+    var parsed = g.parse('''
+  input UserInput {
+    age: [Int!]!
+  }
+''');
+    expect(parsed is Success, true);
+    var userInput = g.inputs["UserInput"]!;
+
+    var serializer = JavaSerializer(g);
+    var fromJson = serializer.generateFromJson(
+        userInput.getSerializableFields(g.mode), "UserInput");
+    expect(
+        fromJson.split("\n").map((e) => e.trim()),
+        containsAllInOrder([
+          'public static UserInput fromJson(java.util.Map<String, Object> json) {',
+          'return new UserInput(',
+          '((java.util.List<Object>)json.get("age")).stream().map(json0 -> ((Number)json0).intValue()).collect(java.util.stream.Collectors.toList())',
+          ');',
+          "}"
+        ]));
+  });
+
+  test("Java input fromJson enum", () {
+    final GQGrammar g = GQGrammar();
+
+    var parsed = g.parse('''
+  enum Gender {male female}
+  input UserInput {
+    gender: Gender!
+  }
+''');
+    expect(parsed is Success, true);
+    var userInput = g.inputs["UserInput"]!;
+
+    var serializer = JavaSerializer(g);
+    var fromJson = serializer.generateFromJson(
+        userInput.getSerializableFields(g.mode), "UserInput");
+    expect(
+        fromJson.split("\n").map((e) => e.trim()),
+        containsAllInOrder([
+          'public static UserInput fromJson(java.util.Map<String, Object> json) {',
+          'return new UserInput(',
+          'Gender.fromJson((String)json.get("gender"))',
+          ');',
+          "}"
+        ]));
+  });
+
+
+  test("Java input fromJson list of enum", () {
+    final GQGrammar g = GQGrammar();
+
+    var parsed = g.parse('''
+  enum Gender {male female}
+  input UserInput {
+    gender: [Gender!]!
+  }
+''');
+    expect(parsed is Success, true);
+    var userInput = g.inputs["UserInput"]!;
+
+    var serializer = JavaSerializer(g);
+    var fromJson = serializer.generateFromJson(
+        userInput.getSerializableFields(g.mode), "UserInput");
+    expect(
+        fromJson.split("\n").map((e) => e.trim()),
+        containsAllInOrder([
+          'public static UserInput fromJson(java.util.Map<String, Object> json) {',
+          'return new UserInput(',
+          '((java.util.List<Object>)json.get("gender")).stream().map(json0 -> Gender.fromJson((String)json0)).collect(java.util.stream.Collectors.toList())',
+          ');',
+          "}"
+        ]));
+  });
+
+  test("Java input fromJson input", () {
+    final GQGrammar g = GQGrammar();
+
+    var parsed = g.parse('''
+  input AgeInput {
+    age: Int!
+  }
+  input UserInput {
+    age: AgeInput!
+  }
+''');
+    expect(parsed is Success, true);
+    var userInput = g.inputs["UserInput"]!;
+
+    var serializer = JavaSerializer(g);
+    var fromJson = serializer.generateFromJson(
+        userInput.getSerializableFields(g.mode), "UserInput");
+    expect(
+        fromJson.split("\n").map((e) => e.trim()),
+        containsAllInOrder([
+          'public static UserInput fromJson(java.util.Map<String, Object> json) {',
+          'return new UserInput(',
+          'AgeInput.fromJson((java.util.Map<String, Object>)json.get("age"))',
+          ');',
+          "}"
+        ]));
+  });
+
+
+  test("Java input fromJson input", () {
+    final GQGrammar g = GQGrammar();
+
+    var parsed = g.parse('''
+  input AgeInput {
+    age: Int!
+  }
+  input UserInput {
+    age: [AgeInput!]!
+  }
+''');
+    expect(parsed is Success, true);
+    var userInput = g.inputs["UserInput"]!;
+
+    var serializer = JavaSerializer(g);
+    var fromJson = serializer.generateFromJson(
+        userInput.getSerializableFields(g.mode), "UserInput");
+        print(fromJson);
+    expect(
+        fromJson.split("\n").map((e) => e.trim()),
+        containsAllInOrder([
+          'public static UserInput fromJson(java.util.Map<String, Object> json) {',
+          'return new UserInput(',
+          '((java.util.List<Object>)json.get("age")).stream().map(json0 -> AgeInput.fromJson((java.util.Map<String, Object>)json0)).collect(java.util.stream.Collectors.toList())',
+          ');',
+          "}"
+        ]));
+  });
+
+
+
+
+  test("Java input fromJson nullable string11", () {
+    final GQGrammar g = GQGrammar();
+
+    var parsed = g.parse('''
+  interface BasicEntity {
+    id: ID!
+    idList: [ID]
+  }
+
+  type User implements BasicEntity {
+    id: ID!
+    idList: [ID]
+    name: String!
+  }
+
+  type Animal implements BasicEntity {
+    id: ID!
+    idList: [ID]
+    name: String!
+    ownerId: ID!
+  }
+''');
+    expect(parsed is Success, true);
+
+    var serializer = JavaSerializer(g, typesAsRecords: true);
+    
+    // print(inputSerial);
+    var fileName = "//Users/ramdane/projects/Testproject/src";
+
+    saveToFile(serializer.serializeInterface(g.interfaces["BasicEntity"]!), "${fileName}/BasicEntity.java");
+    saveToFile(serializer.serializeTypeDefinition(g.getType("Animal")),
+        "${fileName}/Animal.java");
+    saveToFile(serializer.serializeTypeDefinition(g.getType("User")),
+        "${fileName}/User.java");
+  });
+
+ 
 
   test("Java interface fromJson", () {
     final GQGrammar g = GQGrammar(
