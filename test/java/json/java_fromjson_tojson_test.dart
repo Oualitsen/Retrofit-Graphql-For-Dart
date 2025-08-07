@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
-import 'package:retrofit_graphql/src/serializers/dart_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/java_serializer.dart';
 import 'package:test/test.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
@@ -23,8 +22,6 @@ void main() {
     var gender = g.enums["Gender"]!;
     var serializer = JavaSerializer(g);
     var genderSerial = serializer.serializeEnumDefinition(gender);
-
-    print(genderSerial);
 
     expect(
         genderSerial.split("\n").map((e) => e.trim()),
@@ -86,15 +83,6 @@ void main() {
     var serializer = JavaSerializer(g);
     var inputSerial = serializer.doSerializeInputDefinition(userInput);
 
-    print(inputSerial);
-
-    var file = File("test/java/json/test.java");
-    file.writeAsStringSync('''
-$inputSerial
-${serializer.doSerializeInputDefinition(g.inputs['CityInput']!)}
-${serializer.serializeEnumDefinition(g.enums['Gender']!)}
-''');
-
     expect(
       inputSerial.split('\n').map((e) => e.trim()),
       containsAllInOrder([
@@ -134,9 +122,7 @@ ${serializer.serializeEnumDefinition(g.enums['Gender']!)}
     expect(parsed is Success, true);
     var userInput = g.inputs["UserInput"]!;
     var serializer = JavaSerializer(g);
-    var inputSerial = serializer.doSerializeInputDefinition(userInput);
-
-    print(inputSerial);
+    var inputSerial = serializer.generateToJson(userInput.fields);
 
     expect(
       inputSerial.split('\n').map((e) => e.trim()),
@@ -145,7 +131,7 @@ ${serializer.serializeEnumDefinition(g.enums['Gender']!)}
         'java.util.Map<String, Object> map = new java.util.HashMap<>();',
         'map.put("names", names == null ? null : java.util.stream.Stream.of(names).map(e0 -> e0).collect(java.util.stream.Collectors.toList()));',
         'map.put("genderList", genderList == null ? null : java.util.stream.Stream.of(genderList).map(e0 -> java.util.Optional.ofNullable(e0).map((e) -> e.toJson()).orElse(null)).collect(java.util.stream.Collectors.toList()));',
-        'map.put("genderList2", genderList2 == null ? null : java.util.stream.Stream.of(genderList2).map(e0 -> e0 == null ? null : java.util.stream.Stream.of(e0).map(e1 -> e1.toJson()).collect(java.util.stream.Collectors.toList()));).collect(java.util.stream.Collectors.toList()));',
+        'map.put("genderList2", genderList2 == null ? null : java.util.stream.Stream.of(genderList2).map(e0 -> e0 == null ? null : java.util.stream.Stream.of(e0).map(e1 -> e1.toJson()).collect(java.util.stream.Collectors.toList())).collect(java.util.stream.Collectors.toList()));',
         'return map;',
         '}'
       ]),
@@ -273,8 +259,6 @@ ${serializer.serializeEnumDefinition(g.enums['Gender']!)}
         ]));
   });
 
-
-
   test("Java input fromJson list of  nonnullable string", () {
     final GQGrammar g = GQGrammar();
 
@@ -327,7 +311,6 @@ ${serializer.serializeEnumDefinition(g.enums['Gender']!)}
         ]));
   });
 
-
   test("Java input fromJson list of numbers", () {
     final GQGrammar g = GQGrammar();
 
@@ -378,7 +361,6 @@ ${serializer.serializeEnumDefinition(g.enums['Gender']!)}
           "}"
         ]));
   });
-
 
   test("Java input fromJson list of enum", () {
     final GQGrammar g = GQGrammar();
@@ -434,7 +416,6 @@ ${serializer.serializeEnumDefinition(g.enums['Gender']!)}
         ]));
   });
 
-
   test("Java input fromJson input", () {
     final GQGrammar g = GQGrammar();
 
@@ -452,7 +433,6 @@ ${serializer.serializeEnumDefinition(g.enums['Gender']!)}
     var serializer = JavaSerializer(g);
     var fromJson = serializer.generateFromJson(
         userInput.getSerializableFields(g.mode), "UserInput");
-        print(fromJson);
     expect(
         fromJson.split("\n").map((e) => e.trim()),
         containsAllInOrder([
@@ -463,47 +443,6 @@ ${serializer.serializeEnumDefinition(g.enums['Gender']!)}
           "}"
         ]));
   });
-
-
-
-
-  test("Java input fromJson nullable string11", () {
-    final GQGrammar g = GQGrammar();
-
-    var parsed = g.parse('''
-  interface BasicEntity {
-    id: ID!
-    idList: [ID]
-  }
-
-  type User implements BasicEntity {
-    id: ID!
-    idList: [ID]
-    name: String!
-  }
-
-  type Animal implements BasicEntity {
-    id: ID!
-    idList: [ID]
-    name: String!
-    ownerId: ID!
-  }
-''');
-    expect(parsed is Success, true);
-
-    var serializer = JavaSerializer(g, typesAsRecords: true);
-    
-    // print(inputSerial);
-    var fileName = "//Users/ramdane/projects/Testproject/src";
-
-    saveToFile(serializer.serializeInterface(g.interfaces["BasicEntity"]!), "${fileName}/BasicEntity.java");
-    saveToFile(serializer.serializeTypeDefinition(g.getType("Animal")),
-        "${fileName}/Animal.java");
-    saveToFile(serializer.serializeTypeDefinition(g.getType("User")),
-        "${fileName}/User.java");
-  });
-
- 
 
   test("Java interface fromJson", () {
     final GQGrammar g = GQGrammar(
@@ -527,14 +466,25 @@ ${serializer.serializeEnumDefinition(g.enums['Gender']!)}
 ''');
     expect(parsed is Success, true);
     var user = g.interfaces["BasicEntity"]!;
-    var serializer = DartSerializer(g);
+    var serializer = JavaSerializer(g);
     var userSerial = serializer.serializeInterface(user);
-    print(userSerial);
-    var fileName = "test/dart/json/test.dart";
-    File(fileName).writeAsStringSync('''
-${userSerial}
-${serializer.serializeTypeDefinition(g.getType("User"))}
-${serializer.serializeTypeDefinition(g.getType("Animal"))}
-''');
+
+    expect(
+      userSerial.split('\n').map((e) => e.trim()),
+      containsAllInOrder([
+        'public interface BasicEntity {',
+        'String getId();',
+        'java.util.Map<String, Object> toJson();',
+        'static BasicEntity fromJson(java.util.Map<String, Object> json) {',
+        'String typename = (String)json.get("__typename");',
+        'switch(typename) {',
+        'case "User": return User.fromJson(json);',
+        'case "Animal": return Animal.fromJson(json);',
+        'default: throw new RuntimeException(String.format("Invalid type %s. %s does not implement BasicEntity or not defined", typename, typename));',
+        '}',
+        '}',
+        '}'
+      ]),
+    );
   });
 }

@@ -123,22 +123,25 @@ class JavaSerializer extends GqSerializer {
   }
 
   String serializeArgumentField(GQField def,
-      {bool withFianl = true, bool withDecorators = false}) {
+      {bool withFianl = true, bool withDecorators = false, String decoratorJoiner = "\n"}) {
     final type = def.type;
     final name = def.name;
     final hasInculeOrSkipDiretives = def.hasInculeOrSkipDiretives;
-    var result =
-        "${serializeType(type, hasInculeOrSkipDiretives, def.serialzeAsArray)} $name";
-    if (withFianl) {
-      result = "final $result";
-    }
+    final buffer = StringBuffer();
     if (withDecorators) {
-      var decorators = serializeDecorators(def.getDirectives());
+      var decorators = serializeDecorators(def.getDirectives(), joiner: decoratorJoiner);
       if (decorators.trim().isNotEmpty) {
-        result = "$decorators $result";
+        buffer.write(decorators);
+        buffer.write(decoratorJoiner);
       }
     }
-    return result;
+    if(withFianl) {
+      buffer.write("final ");
+    }
+    buffer.write(serializeType(type, hasInculeOrSkipDiretives, def.serialzeAsArray));
+    buffer.write(" ");
+    buffer.write(name);
+    return buffer.toString();
   }
 
   String serializeTypeReactive(
@@ -183,10 +186,14 @@ class JavaSerializer extends GqSerializer {
       {bool checkForNulls = false}) {
     final decorators = serializeDecorators(def.getDirectives());
     if (inputsAsRecords) {
-      return """
-$decorators
-${serializeRecord(def.token, def.fields, {})}
-""";
+      var buffer = StringBuffer();
+      if(decorators.isNotEmpty) {
+        buffer.writeln(decorators);
+      }
+      buffer.writeln(serializeRecord(def.token, def.fields, {}));
+      return buffer.toString();
+
+      
     }
 
     return """
@@ -366,7 +373,7 @@ ${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
   String fieldToJson(GQField field) {
     var buffer = StringBuffer();
     var toJosnCall = callToJson(field, field.type, field.name.token, 0);
-    buffer.write("${toJosnCall}");
+    buffer.write(toJosnCall);
     return buffer.toString();
   }
 
@@ -511,22 +518,22 @@ $result
       String recordName, List<GQField> fields, Set<String> interfaceNames) {
     final list = fields
         .map((f) =>
-            serializeArgumentField(f, withFianl: false, withDecorators: true))
+            serializeArgumentField(f, withFianl: false, withDecorators: true, decoratorJoiner: " "))
         .toList();
     String interfaceImpl = _serializeImplements(interfaceNames);
     var buffer = StringBuffer();
     buffer.write("public record $recordName");
     
-    buffer.write(" (");
+    buffer.write("(");
     buffer.write(serializeListText(list, withParenthesis: false, join: ", "));
     buffer.write(")");
     if(interfaceImpl.isNotEmpty) {
       buffer.write(" ");
       buffer.write(interfaceImpl);
     }
-    buffer.writeln("{");
-    buffer.writeln(generateToJson(fields));
-    buffer.writeln(generateFromJson(fields, recordName));
+    buffer.writeln(" {");
+    buffer.writeln(generateToJson(fields).ident());
+    buffer.writeln(generateFromJson(fields, recordName).ident());
     buffer.write("}");
     return buffer.toString();
   }
@@ -701,7 +708,7 @@ ${'return java.util.Objects.hash(${fields.join(", ")});'.ident()}
     if (parents.isNotEmpty) {
       buffer.write(" extends ${parents.map((e) => e.tokenInfo).join(", ")}");
     }
-    buffer.writeln("{");
+    buffer.writeln(" {");
     for (var f in fields) {
       if (getters) {
         var fieldDecorators = serializeDecorators(f.getDirectives(), joiner: "\n");
@@ -721,8 +728,9 @@ ${'return java.util.Objects.hash(${fields.join(", ")});'.ident()}
     // toJson
     buffer.writeln("java.util.Map<String, Object> toJson();".ident());
     // fromJson to Json
-    buffer.writeln(_serializeFromJsonForInterface(interface.token, interface.subTypes).ident());
-
+    if(interface.subTypes.isNotEmpty){
+      buffer.writeln(_serializeFromJsonForInterface(interface.token, interface.subTypes).ident());
+    }
     buffer.write("}");
     return buffer.toString();
    
