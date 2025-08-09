@@ -321,25 +321,31 @@ GQGrammar createGrammar(GeneratorConfig config) {
 
 Future<Set<String>> generateClientClasses(
     GQGrammar grammar, GeneratorConfig config, DateTime started) async {
-  final GqSerializer serializer = DartSerializer(grammar);
+  final DartSerializer serializer = DartSerializer(grammar);
   final dcs = DartClientSerializer(grammar, serializer);
-  const fileExtension = ".dart";
+  final fileExtension = dcs.fileExtension;
   final List<Future<File>> futures = [];
   final destinationDir = config.outputDir;
 
-  var enumFiles = grammar.enums.values.map((e) => "'../enums/${e.token}${fileExtension}'").toSet();
-  var inputFiles = grammar.inputs.values.map((e) => "'../inputs/${e.token}${fileExtension}'").toSet();
-  var typeFiles = grammar.projectedTypes.values.map((e) => "'../types/${e.token}${fileExtension}'").toSet();
-
+  var enumFiles = grammar.enums.values
+      .map((e) => "'../enums/${e.token}${fileExtension}'")
+      .toSet();
+  var inputFiles = grammar.inputs.values
+      .map((e) => "'../inputs/${e.token}${fileExtension}'")
+      .toSet();
+  var typeFiles = grammar.projectedTypes.values
+      .map((e) => "'../types/${e.token}${fileExtension}'")
+      .toSet();
 
   grammar.enums.forEach((k, def) {
     var text = serializer.serializeEnumDefinition(def);
     var r = writeToFile(
-        data: text,
-        fileName: "${k}${fileExtension}",
-        subdir: "enums",
-        imports: enumFiles,
-        destinationDir: destinationDir,);
+      data: text,
+      fileName: "${k}${fileExtension}",
+      subdir: "enums",
+      imports: enumFiles,
+      destinationDir: destinationDir,
+    );
     futures.add(r);
   });
 
@@ -349,27 +355,33 @@ Future<Set<String>> generateClientClasses(
         data: text,
         fileName: "$k${fileExtension}",
         subdir: "inputs",
-        imports:[... enumFiles, ...inputFiles],
+        imports: [...enumFiles, ...inputFiles],
         destinationDir: destinationDir);
     futures.add(r);
   });
 
-   grammar.projectedTypes.forEach((k, def) {
+  grammar.projectedTypes.forEach((k, def) {
     var text = serializer.serializeTypeDefinition(def);
     var r = writeToFile(
         data: text,
         fileName: "$k${fileExtension}",
         subdir: "types",
-        imports: [... enumFiles, ...inputFiles, ...typeFiles],
+        imports: [...enumFiles, ...inputFiles, ...typeFiles],
         destinationDir: destinationDir);
     futures.add(r);
   });
 
   String client = dcs.generateClient();
-  var r = writeToFile(data: client, fileName: 'GQClient${fileExtension}', subdir: 'client', imports: [... enumFiles, ...inputFiles, ...typeFiles], destinationDir: destinationDir);
+  var r = writeToFile(
+      data: client,
+      fileName: 'GQClient${fileExtension}',
+      subdir: 'client',
+      imports: [...enumFiles, ...inputFiles, ...typeFiles],
+      destinationDir: destinationDir);
   futures.add(r);
   var result = await Future.wait(futures);
-  stdout.writeln("Generated ${futures.length} files in ${formatElapsedTime(started)}");
+  stdout.writeln(
+      "Generated ${futures.length} files in ${formatElapsedTime(started)}");
   var paths = result.map((f) => f.path).toSet();
   await cleanUpObsoleteFiles(paths);
   return paths;
@@ -394,9 +406,13 @@ Future<Set<String>> generateServerClasses(
         data: text,
         fileName: "${def.tokenInfo}${fileExtension}",
         subdir: "types",
-        imports: ["$packageName.enums", "$packageName.interfaces"],
+        imports: [
+          if (grammar.enums.isNotEmpty) "$packageName.enums",
+          if (grammar.interfaces.isNotEmpty) "$packageName.interfaces"
+        ],
         destinationDir: destinationDir,
-        packageName: packageName);
+        packageName: packageName,
+        appendStar: true);
     futures.add(r);
   });
   grammar.interfaces.forEach((k, def) {
@@ -405,9 +421,13 @@ Future<Set<String>> generateServerClasses(
         data: text,
         fileName: "$k${fileExtension}",
         subdir: "interfaces",
-        imports: ["$packageName.enums", "$packageName.types"],
+        imports: [
+          if (grammar.enums.isNotEmpty) "$packageName.enums",
+          if (grammar.types.isNotEmpty) "$packageName.types"
+        ],
         destinationDir: destinationDir,
-        packageName: packageName, appendStar: true);
+        packageName: packageName,
+        appendStar: true);
     futures.add(r);
   });
   grammar.enums.forEach((k, def) {
@@ -418,7 +438,8 @@ Future<Set<String>> generateServerClasses(
         subdir: "enums",
         imports: [],
         destinationDir: destinationDir,
-        packageName: packageName, appendStar: true);
+        packageName: packageName,
+        appendStar: true);
     futures.add(r);
   });
   grammar.inputs.forEach((k, def) {
@@ -427,9 +448,10 @@ Future<Set<String>> generateServerClasses(
         data: text,
         fileName: "$k${fileExtension}",
         subdir: "inputs",
-        imports: ["$packageName.enums"],
+        imports: [if (grammar.enums.isNotEmpty) "$packageName.enums"],
         destinationDir: destinationDir,
-        packageName: packageName, appendStar: true);
+        packageName: packageName,
+        appendStar: true);
     futures.add(r);
   });
 
@@ -440,12 +462,13 @@ Future<Set<String>> generateServerClasses(
         fileName: "$k${fileExtension}",
         subdir: "services",
         imports: [
-          "$packageName.enums",
-          "$packageName.types",
-          "$packageName.inputs"
+          if (grammar.enums.isNotEmpty) "$packageName.enums",
+          if (grammar.types.isNotEmpty) "$packageName.types",
+          if (grammar.inputs.isNotEmpty) "$packageName.inputs"
         ],
         destinationDir: destinationDir,
-        packageName: packageName, appendStar: true);
+        packageName: packageName,
+        appendStar: true);
     futures.add(r);
   });
 
@@ -456,13 +479,14 @@ Future<Set<String>> generateServerClasses(
         fileName: "${k}Controller${fileExtension}",
         subdir: "controllers",
         imports: [
-          "$packageName.enums",
-          "$packageName.types",
-          "$packageName.inputs",
-          "$packageName.services"
+          if (grammar.enums.isNotEmpty) "$packageName.enums",
+          if (grammar.types.isNotEmpty) "$packageName.types",
+          if (grammar.inputs.isNotEmpty) "$packageName.inputs",
+          if (grammar.services.isNotEmpty) "$packageName.services"
         ],
         destinationDir: destinationDir,
-        packageName: packageName, appendStar: true);
+        packageName: packageName,
+        appendStar: true);
     futures.add(r);
   });
 
@@ -472,9 +496,13 @@ Future<Set<String>> generateServerClasses(
         data: text,
         fileName: "${k}${fileExtension}",
         subdir: "repositories",
-        imports: ["$packageName.enums", "$packageName.types"],
+        imports: [
+          if (grammar.enums.isNotEmpty) "$packageName.enums",
+          if (grammar.types.isNotEmpty) "$packageName.types"
+        ],
         destinationDir: destinationDir,
-        packageName: packageName, appendStar: true);
+        packageName: packageName,
+        appendStar: true);
     futures.add(r);
   });
   if (springConfig.generateSchema) {
@@ -511,8 +539,7 @@ Future<File> writeToFile(
     required Iterable<String> imports,
     required String destinationDir,
     String? packageName,
-    bool appendStar = false
-    }) {
+    bool appendStar = false}) {
   final path = "$destinationDir/$subdir/$fileName";
   var buffer = StringBuffer();
   if (packageName != null) {
@@ -520,9 +547,9 @@ Future<File> writeToFile(
   }
   if (imports.isNotEmpty) {
     buffer.writeln(imports.map((i) => "import $i").map((e) {
-      if(appendStar) {
+      if (appendStar) {
         return '${e}.*;';
-      }else {
+      } else {
         return '${e};';
       }
     }).join("\n"));

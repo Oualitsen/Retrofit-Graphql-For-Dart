@@ -29,28 +29,26 @@ ${_grammar.hasSubscriptions ? "import 'package:web_socket_channel/web_socket_cha
 
 
 
-final _fragmMap = <String, String>{};
 
-String _getFragment(String fragName) {
-  return _fragmMap[fragName]!;
-}
+
 
 ${GQQueryType.values.map((e) => generateQueriesClassByType(e)).where((e) => e!= null).join("\n").ident()}
 
 class GQClient {
+
+  final _fragmMap = <String, String>{};
   
-  ${_grammar.hasQueries ? 'final ${classNameFromType(GQQueryType.query)} queries;' : ''}
-  ${_grammar.hasMutations ? 'final ${classNameFromType(GQQueryType.mutation)} mutations;' : ''}
-  ${_grammar.hasSubscriptions ? 'final ${classNameFromType(GQQueryType.subscription)} subscriptions;' : ''}
-  GQClient(Future<String> Function(String payload${_grammar.operationNameAsParameter ? ', String $_operationNameParam' : ''}) adapter${_grammar.hasSubscriptions ? ', WebSocketAdapter wsAdapter' : ''})
-      :${[
-      if (_grammar.hasQueries) 'queries = ${classNameFromType(GQQueryType.query)}(adapter)',
-      if (_grammar.hasMutations) ' mutations = ${classNameFromType(GQQueryType.mutation)}(adapter)',
-      if (_grammar.hasSubscriptions) 'subscriptions = ${classNameFromType(GQQueryType.subscription)}(wsAdapter)'
-    ].where((element) => element.isNotEmpty).join(", ")} {
+  ${_grammar.hasQueries ? 'late final ${classNameFromType(GQQueryType.query)} queries;' : ''}
+  ${_grammar.hasMutations ? 'late final ${classNameFromType(GQQueryType.mutation)} mutations;' : ''}
+  ${_grammar.hasSubscriptions ? 'late final ${classNameFromType(GQQueryType.subscription)} subscriptions;' : ''}
+  GQClient(Future<String> Function(String payload${_grammar.operationNameAsParameter ? ', String $_operationNameParam' : ''}) adapter${_grammar.hasSubscriptions ? ', WebSocketAdapter wsAdapter' : ''}) {
       
 ${_grammar.fragments.values.map((value) => "_fragmMap['${value.tokenInfo}'] = '${_grammar.serializer.serializeFragmentDefinitionBase(value)}';").toList().join("\n").ident(2)}
-         
+${[
+if (_grammar.hasQueries) 'queries = ${classNameFromType(GQQueryType.query)}(adapter, _fragmMap)',
+if (_grammar.hasMutations) 'mutations = ${classNameFromType(GQQueryType.mutation)}(adapter, _fragmMap)',
+if (_grammar.hasSubscriptions) 'subscriptions = ${classNameFromType(GQQueryType.subscription)}(wsAdapter, _fragmMap)'
+].map((e) => e.ident(2)).where((element) => element.isNotEmpty).join(";\n")}; 
     }
 }
 
@@ -72,6 +70,7 @@ ${serializeSubscriptions().ident()}
     var buffer = StringBuffer();
     buffer.writeln("class ${classNameFromType(type)} {");
     buffer.writeln(declareAdapter(type).ident());
+    buffer.writeln("final Map<String, String> fragmentMap;");
     buffer.write(classNameFromType(type).ident());
     buffer.writeln(_declareConstructorArgs(type));
     buffer.writeln(queryList.map((e) => queryToMethod(e)).join("\n").ident());
@@ -82,9 +81,9 @@ ${serializeSubscriptions().ident()}
 
   String _declareConstructorArgs(GQQueryType type) {
     if (type == GQQueryType.subscription) {
-      return "(WebSocketAdapter adapter) : _handler = SubscriptionHandler(adapter);";
+      return "(WebSocketAdapter adapter, this.fragmentMap): _handler = SubscriptionHandler(adapter);";
     }
-    return "(this._adapter);";
+    return "(this._adapter, this.fragmentMap);";
   }
 
   String declareAdapter(GQQueryType type) {
@@ -103,12 +102,10 @@ ${serializeSubscriptions().ident()}
      return """
 ${returnTypeByQueryType(def)} ${def.tokenInfo}(${serializeArgs(def)}) {
     const operationName = "${def.tokenInfo}";
-    ${def.fragments(_grammar).isEmpty ? 'const' : 'final'} fragsValues = ${def.fragments(_grammar).isEmpty ? '"";' : '[${def.fragments(_grammar).map((e) => '"${e.tokenInfo}"').toList().join(", ")}].map((fragName) => _getFragment(fragName)).join(" ");'}
+    ${def.fragments(_grammar).isEmpty ? 'const' : 'final'} fragsValues = ${def.fragments(_grammar).isEmpty ? '"";' : '[${def.fragments(_grammar).map((e) => '"${e.tokenInfo}"').toList().join(", ")}].map((fragName) => fragmentMap[fragName]!).join(" ");'}
     ${def.fragments(_grammar).isEmpty ? 'const' : 'final'} query = \"\"\"${_grammar.serializer.serializeQueryDefinition(def)}\$fragsValues\"\"\";
 
-    final variables = <String, dynamic>{
-        ${def.arguments.map((e) => "'${e.dartArgumentName}': ${_serializeArgumentValue(def, e.token)}").toList().join(", ")}
-    };
+${generateVariables(def).ident()}
         
     final payload = GQPayload(query: query, operationName: operationName, variables: variables);
     ${_serializeAdapterCall(def)}
@@ -116,6 +113,14 @@ ${returnTypeByQueryType(def)} ${def.tokenInfo}(${serializeArgs(def)}) {
     """
         .trim();
     
+  }
+
+  String generateVariables(GQQueryDefinition def) {
+    return '''
+final variables = <String, dynamic>{
+${def.arguments.map((e) => "'${e.dartArgumentName}': ${_serializeArgumentValue(def, e.token)}").map((e) => e.ident()).toList().join(", ")}
+};
+'''.trim();
   }
 
   String _serializeAdapterCall(GQQueryDefinition def) {
@@ -201,6 +206,8 @@ $_generateUuid
 $_webSocketChannelAdapter
 """;
   }
+
+  String get fileExtension => '.dart';
 }
 
 
