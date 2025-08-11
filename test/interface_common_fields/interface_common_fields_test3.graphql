@@ -37,13 +37,17 @@ type Query {
 
 query getData {
     getEntity {
-        ... on Car {
-            id createdBy make model
-        }
-        ... on User {
-            id firstName lastName
-        }
+        ... EntityFrag
     }
     
+}
+
+fragment EntityFrag on BasicEntity {
+... on Car {
+            ..._all_fields
+        }
+        ... on User {
+            ..._all_fields
+        }
 }
 

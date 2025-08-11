@@ -4,20 +4,33 @@ interface BasicEntity {
     id: ID!
     createdBy: String
     creationDate: String
-    lastUpdate: String
-    lastUpdateBy: String
+
+    animal: Animal
 
 }
 
-type User implements BasicEntity{
+interface Animal {
+    name: String
+}
+
+type Dog implements Animal {
+    name: String
+    age: Int
+}
+
+type Cat implements Animal {
+    name: String
+    hasFurr: Boolean
+}
+
+type User implements BasicEntity {
      id: ID!
     createdBy: String
     creationDate: String
-    lastUpdate: String
-    lastUpdateBy: String
 
     firstName: String
     lastName: String
+    animal: Animal
 }
 
 type Car implements BasicEntity {
@@ -29,21 +42,10 @@ type Car implements BasicEntity {
 
     make: String
     model: String
+    animal: Animal
 }
 
 type Query {
-    getEntity : BasicEntity
-}
-
-query getData {
-    getEntity {
-        ... on Car {
-            id createdBy make model
-        }
-        ... on User {
-            id firstName lastName
-        }
-    }
-    
+    getEntity: BasicEntity
 }
 

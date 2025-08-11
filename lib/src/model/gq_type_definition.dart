@@ -2,6 +2,7 @@ import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/gq_directive.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
 import 'package:retrofit_graphql/src/model/gq_has_directives.dart';
+import 'package:retrofit_graphql/src/model/gq_interface.dart';
 import 'package:retrofit_graphql/src/model/gq_token.dart';
 import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 import 'package:retrofit_graphql/src/model/token_info.dart';
@@ -9,6 +10,7 @@ import 'package:retrofit_graphql/src/serializers/graphq_serializer.dart';
 
 class GQTypeDefinition extends GQTokenWithFields with GqDirectivesMixin {
   final Set<TokenInfo> interfaceNames;
+  final Set<GQInterfaceDefinition> interfaces = {};
   final bool nameDeclared;
   final GQTypeDefinition? derivedFromType;
 
@@ -18,7 +20,7 @@ class GQTypeDefinition extends GQTokenWithFields with GqDirectivesMixin {
   /// Used only when generating type for interfaces.
   /// This will be a super class of one or more base types.
   ///
-  final Set<GQTypeDefinition> subTypes = {};
+  final Set<GQTypeDefinition> implementations = {};
 
 
   GQTypeDefinition({

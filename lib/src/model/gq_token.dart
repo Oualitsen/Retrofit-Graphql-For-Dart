@@ -24,7 +24,7 @@ abstract class GQTokenWithFields extends GQToken {
   }
 
   void addField(GQField field) {
-    if(_fieldMap.containsKey(field.name.token)) {
+    if (_fieldMap.containsKey(field.name.token)) {
       throw ParseException("Duplicate field defition on type ${tokenInfo}, field: ${field.name}", info: field.name);
     }
     _fieldMap[field.name.token] = field;
@@ -53,10 +53,10 @@ abstract class GQTokenWithFields extends GQToken {
   }
 
   List<GQField> getSerializableFields(CodeGenerationMode mode, {bool skipGenerated = false}) {
-    return fields.where((f) => !shouldSkipSerialization(directives: f.getDirectives(skipGenerated: skipGenerated), mode: mode)).toList();
+    return fields
+        .where((f) => !shouldSkipSerialization(directives: f.getDirectives(skipGenerated: skipGenerated), mode: mode))
+        .toList();
   }
-
- 
 
   List<GQField> getSkipOnServerFields() {
     return _skipOnServerFields ??= fields.where((field) {

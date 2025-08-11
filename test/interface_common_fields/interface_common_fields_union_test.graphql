@@ -1,0 +1,38 @@
+
+
+
+type Car  {
+    make: String
+    model: String
+}
+
+type Truck {
+    make: String
+    model: String
+    capacity: String
+}
+
+type User {
+    name: String
+    vehicle: Vehicle
+}
+
+union Vehicle = Car | Truck
+
+type Query {
+    getVehicle: Vehicle
+    getUser: User
+}
+
+
+query getData {
+    getVehicle {
+        ... on Car {
+            make
+        } ... on Truck {
+            make capacity
+        }
+    } 
+}
+
+

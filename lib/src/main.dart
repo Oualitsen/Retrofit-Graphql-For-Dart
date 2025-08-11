@@ -464,7 +464,8 @@ Future<Set<String>> generateServerClasses(
         imports: [
           if (grammar.enums.isNotEmpty) "$packageName.enums",
           if (grammar.types.isNotEmpty) "$packageName.types",
-          if (grammar.inputs.isNotEmpty) "$packageName.inputs"
+          if (grammar.inputs.isNotEmpty) "$packageName.inputs",
+          if (grammar.interfaces.isNotEmpty) "$packageName.interfaces",
         ],
         destinationDir: destinationDir,
         packageName: packageName,
@@ -482,7 +483,8 @@ Future<Set<String>> generateServerClasses(
           if (grammar.enums.isNotEmpty) "$packageName.enums",
           if (grammar.types.isNotEmpty) "$packageName.types",
           if (grammar.inputs.isNotEmpty) "$packageName.inputs",
-          if (grammar.services.isNotEmpty) "$packageName.services"
+          if (grammar.services.isNotEmpty) "$packageName.services",
+          if (grammar.interfaces.isNotEmpty) "$packageName.interfaces",
         ],
         destinationDir: destinationDir,
         packageName: packageName,

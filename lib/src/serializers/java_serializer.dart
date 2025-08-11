@@ -56,8 +56,9 @@ String _mapOf(String key, String type) {
 class JavaSerializer extends GqSerializer {
   final bool inputsAsRecords;
   final bool typesAsRecords;
+  final bool fromToJson;
   JavaSerializer(super.grammar,
-      {this.inputsAsRecords = false, this.typesAsRecords = false}) {
+      {this.inputsAsRecords = false, this.typesAsRecords = false, this.fromToJson = false}) {
     _initAnnotations();
   }
 
@@ -338,6 +339,9 @@ ${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
   }
 
   String generateFromJson(List<GQField> fields, String token) {
+    if(!fromToJson) {
+      return "";
+    }
     var buffer = StringBuffer(
         "public static ${token} fromJson(${_mapOf('String', 'Object')} json) {");
     buffer.writeln();
@@ -355,6 +359,9 @@ ${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
   }
 
   String generateToJson(List<GQField> fields) {
+    if(!fromToJson) {
+      return "";
+    }
     var buffer =
         StringBuffer("public ${_mapOf('String', 'Object')} toJson() {");
     buffer.writeln();
@@ -697,7 +704,7 @@ ${'return java.util.Objects.hash(${fields.join(", ")});'.ident()}
   String serializeInterface(GQInterfaceDefinition interface,
       {bool getters = true}) {
     final token = interface.tokenInfo;
-    final parents = interface.parents;
+    final interfaces = interface.interfaces;
     final fields = interface.getSerializableFields(grammar.mode);
     var decorators = serializeDecorators(interface.getDirectives());
     var buffer = StringBuffer();
@@ -705,8 +712,8 @@ ${'return java.util.Objects.hash(${fields.join(", ")});'.ident()}
       buffer.writeln(decorators);
     }
     buffer.write("public interface $token");
-    if (parents.isNotEmpty) {
-      buffer.write(" extends ${parents.map((e) => e.tokenInfo).join(", ")}");
+    if (interfaces.isNotEmpty) {
+      buffer.write(" extends ${interfaces.map((e) => e.tokenInfo.token).join(", ")}");
     }
     buffer.writeln(" {");
     for (var f in fields) {
@@ -726,18 +733,20 @@ ${'return java.util.Objects.hash(${fields.join(", ")});'.ident()}
       buffer.writeln(";");
     }
     // toJson
-    buffer.writeln("java.util.Map<String, Object> toJson();".ident());
+    if(fromToJson){
+      buffer.writeln("java.util.Map<String, Object> toJson();".ident());
+    }
     // fromJson to Json
-    if(interface.subTypes.isNotEmpty){
-      buffer.writeln(_serializeFromJsonForInterface(interface.token, interface.subTypes).ident());
+    if(interface.implementations.isNotEmpty){
+      buffer.writeln(_serializeFromJsonForInterface(interface.token, interface.implementations).ident());
     }
     buffer.write("}");
     return buffer.toString();
    
   }
 
-    static String _serializeFromJsonForInterface(String token, Set<GQTypeDefinition> subTypes) {
-    if(subTypes.isEmpty) {
+  String _serializeFromJsonForInterface(String token, Set<GQTypeDefinition> subTypes) {
+    if(subTypes.isEmpty || !fromToJson) {
       return "";
     }
     var buffer = StringBuffer("static ${token} fromJson(${_mapOf("String", "Object")} json) {");
@@ -746,8 +755,9 @@ ${'return java.util.Objects.hash(${fields.join(", ")});'.ident()}
     buffer.writeln('String typename = (String)json.get("__typename");'.ident());
     buffer.writeln("switch(typename) {".ident());
     for(var st in subTypes) {
-      String currentToken = st.derivedFromType?.tokenInfo.token ?? st.tokenInfo.token;
-      buffer.writeln('case "${currentToken}": return ${currentToken}.fromJson(json);'.ident(2));
+      String typeNameValue = st.derivedFromType?.tokenInfo.token ?? st.tokenInfo.token;
+      String currentToken = st.tokenInfo.token;
+      buffer.writeln('case "${typeNameValue}": return ${currentToken}.fromJson(json);'.ident(2));
     }
     buffer.writeln('default: throw new RuntimeException(String.format("Invalid type %s. %s does not implement $token or not defined", typename, typename));'.ident(2));
     buffer.writeln("}".ident());
