@@ -4,18 +4,14 @@ interface BasicEntity {
     id: ID!
     createdBy: String
     creationDate: String
-    lastUpdate: String
-    lastUpdateBy: String
-
 }
 
-type User implements BasicEntity{
+
+
+type User implements BasicEntity {
      id: ID!
     createdBy: String
     creationDate: String
-    lastUpdate: String
-    lastUpdateBy: String
-
     firstName: String
     lastName: String
 }
@@ -32,18 +28,21 @@ type Car implements BasicEntity {
 }
 
 type Query {
-    getEntity : BasicEntity
+    getEntity: BasicEntity
 }
 
-query getData {
+query getEntity {
     getEntity {
+        ... _all_fields
+    } 
+}
+
+fragment BasicEntityFrag on BasicEntity {
         ... on Car {
-            id createdBy make model
+            ... _all_fields
         }
         ... on User {
-            id firstName lastName
+            ... _all_fields
         }
-    }
-    
 }
 

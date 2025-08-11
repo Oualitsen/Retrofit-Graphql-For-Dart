@@ -34,16 +34,3 @@ type Car implements BasicEntity {
 type Query {
     getEntity : BasicEntity
 }
-
-query getData {
-    getEntity {
-        ... on Car {
-            id createdBy make model
-        }
-        ... on User {
-            id firstName lastName
-        }
-    }
-    
-}
-
