@@ -67,7 +67,7 @@ void main() async {
     expect(parsed is Success, true);
     var vehicle = g.projectedTypes["Vehicle"]!;
     var serializer = DartSerializer(g);
-    print(serializer.serializeTypeDefinition(vehicle));
+    print(serializer.serializeTypeDefinition(vehicle, ""));
     expect(vehicle.fieldNames.length, 2);
     expect(vehicle.fieldNames, containsAll(["make", "model"]));
     print("vehicle.implementations = ${vehicle.implementations.map((e) => e.token)}");

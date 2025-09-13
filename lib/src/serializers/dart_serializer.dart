@@ -4,6 +4,8 @@ import 'package:retrofit_graphql/src/model/gq_enum_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
 import 'package:retrofit_graphql/src/model/gq_input_type_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_interface.dart';
+import 'package:retrofit_graphql/src/model/gq_token.dart';
+import 'package:retrofit_graphql/src/model/gq_token_with_fields.dart';
 import 'package:retrofit_graphql/src/model/gq_type.dart';
 import 'package:retrofit_graphql/src/model/gq_type_definition.dart';
 import 'package:retrofit_graphql/src/serializers/annotation_serializer.dart';
@@ -234,9 +236,10 @@ ${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
 
   String _doSerializeTypeDefinition(GQTypeDefinition def) {
     final token = def.token;
-    final subTypes = def.implementations;
+    final implementations = def.implementations;
+
     final interfaceNames = def.interfaceNames.map((e) => e.token).toSet();
-    interfaceNames.addAll(subTypes.map((e) => e.token));
+    interfaceNames.addAll(implementations.map((e) => e.token));
     var decorators = serializeDecorators(def.getDirectives());
     var buffer = StringBuffer();
     if (decorators.isNotEmpty) {
@@ -376,5 +379,34 @@ ${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
 
   String serializeGetterDeclaration(GQField field) {
     return """${serializeType(field.type, false)} get ${field.name}""";
+  }
+
+  @override
+  String getFileNameFor(GQToken token) {
+    return "${token.token}.dart";
+  }
+
+  @override
+  String serializeImportToken(GQToken token, String importPrefix) {
+    String? init;
+    if (token is GQEnumDefinition) {
+      init = "enums/${serializeImport(token.token)}";
+    } else if (token is GQInterfaceDefinition) {
+      init = "interfaces/${serializeImport(token.token)}";
+    } else if (token is GQTypeDefinition) {
+      init = "types/${serializeImport(token.token)}";
+    } else if (token is GQInputDefinition) {
+      init = "interfaces/${serializeImport(token.token)}";
+    }
+
+    return "${importPrefix}/${init}";
+  }
+
+  @override
+  String serializeImport(String import) {
+    if (import == importList) {
+      return "";
+    }
+    return """import '$import';""";
   }
 }
