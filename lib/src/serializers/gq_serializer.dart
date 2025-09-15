@@ -91,8 +91,8 @@ abstract class GqSerializer {
   String serializeImportToken(GQToken token, String importPrefix);
   String serializeImport(String import);
 
-  String serializeWithImport(GQToken mixin, String importPrefix, String data) {
-    var imports = serializeImports(mixin, importPrefix);
+  String serializeWithImport(GQToken token, String importPrefix, String data) {
+    var imports = serializeImports(token, importPrefix);
     var buffer = StringBuffer();
     buffer.writeln(imports);
     buffer.writeln();

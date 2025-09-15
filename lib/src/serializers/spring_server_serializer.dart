@@ -1,10 +1,11 @@
+import 'package:retrofit_graphql/src/constants.dart';
 import 'package:retrofit_graphql/src/excpetions/parse_exception.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/gq_argument.dart';
 import 'package:retrofit_graphql/src/model/gq_controller.dart';
 import 'package:retrofit_graphql/src/model/gq_directive.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
-import 'package:retrofit_graphql/src/model/gq_interface.dart';
+import 'package:retrofit_graphql/src/model/gq_interface_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_queries.dart';
 import 'package:retrofit_graphql/src/model/gq_service.dart';
 import 'package:retrofit_graphql/src/model/gq_shcema_mapping.dart';
@@ -55,7 +56,7 @@ class SpringServerSerializer {
     final controllerName = ctrl.token;
     final sericeInstanceName = ctrl.serviceName.firstLow;
 
-    ctrl.addImport("org.springframework.stereotype.Controller");
+    ctrl.addImport(SpringImports.controller);
 
     var buffer = StringBuffer();
     buffer.writeln("@Controller");
@@ -109,7 +110,7 @@ class SpringServerSerializer {
       statement = "$statement);";
     }
     if (method.arguments.isNotEmpty) {
-      context.addImport("org.springframework.graphql.data.method.annotation.Argument");
+      context.addImport(SpringImports.gqlArgument);
     }
     var result = """
 ${getAnnotationByShcemaType(type, context)}
@@ -143,13 +144,13 @@ $result
     interface.getSerializableFields(grammar.mode).where((f) => f.name.token == "_").forEach((f) {
       f.addDirective(GQDirectiveValue(gqSkipOnServer.toToken(), [], [], generated: true));
     });
-    interface.addImport("org.springframework.stereotype.Repository");
+    interface.addImport(SpringImports.repository);
 
     var gqRepo = interface.getDirectiveByName(gqRepository)!;
     var className = gqRepo.getArgValueAsString(gqClass);
     if (className == null) {
       className = "JpaRepository";
-      interface.addImport("org.springframework.data.jpa.repository.JpaRepository");
+      interface.addImport(SpringImports.jpaRepository);
     }
     var id = gqRepo.getArgValueAsString(gqIdType);
     var ontType = gqRepo.getArgValueAsString(gqType)!;
@@ -199,7 +200,7 @@ $result
         "${serializer.serializeTypeReactive(context: context, gqType: createListTypeOnSubscription(_getServiceReturnType(method.type), type), reactive: type == GQQueryType.subscription)} ${method.name}(${serializeArgs(method.arguments, argPrefix)}";
     if (injectDataFtechingEnv) {
       var inject = "DataFetchingEnvironment dataFetchingEnvironment";
-      context.addImport("graphql.schema.DataFetchingEnvironment");
+      context.addImport(SpringImports.gqlDataFetchingEnvironment);
       if (method.arguments.isNotEmpty) {
         result = "$result, $inject";
       } else {
@@ -276,7 +277,7 @@ final ${serializer.serializeType(arg.type, false)} ${arg.tokenInfo}
       return "";
     }
     if (mapping.forbid) {
-      context.addImport("graphql.GraphQLException");
+      context.addImport(SpringImports.gqlGraphQLException);
       final statement = """
 throw new GraphQLException("Access denied to field '${mapping.type.tokenInfo}.${mapping.field.name}'");
 """
@@ -304,13 +305,14 @@ ${statement.ident()}
 
   String _getAnnotation(GQSchemaMapping mapping, GQToken context) {
     if (mapping.batch) {
-      context.addImport("org.springframework.graphql.data.method.annotation.BatchMapping");
+      context.addImport(SpringImports.batchMapping);
+
       return """
 @BatchMapping(typeName="${mapping.type.tokenInfo}", field="${mapping.field.name}")
       """
           .trim();
     } else {
-      context.addImport("org.springframework.graphql.data.method.annotation.SchemaMapping");
+      context.addImport(SpringImports.schemaMapping);
       return """
 @SchemaMapping(typeName="${mapping.type.tokenInfo}", field="${mapping.field.name}")
 """
@@ -341,7 +343,7 @@ $result
       if (keyType == "Object") {
         keyType = "?";
       }
-      context.addImport("java.util.Map");
+      context.addImport(JavaImports.map);
       return """
 Map<${convertPrimitiveToBoxed(keyType)}, ${convertPrimitiveToBoxed(serializer.serializeType(mapping.field.type, false))}>
       """
@@ -379,18 +381,22 @@ $result
 
   String getAnnotationByShcemaType(GQQueryType queryType, GQToken context) {
     String result;
+    String import;
     switch (queryType) {
       case GQQueryType.query:
         result = "QueryMapping";
+        import = SpringImports.queryMapping;
         break;
       case GQQueryType.mutation:
         result = "MutationMapping";
+        import = SpringImports.mutationMapping;
         break;
       case GQQueryType.subscription:
         result = "SubscriptionMapping";
+        import = SpringImports.subscriptionMapping;
         break;
     }
-    context.addImport("org.springframework.graphql.data.method.annotation.$result");
+    context.addImport(import);
     return "@$result";
   }
 }

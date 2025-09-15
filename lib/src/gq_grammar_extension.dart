@@ -6,13 +6,11 @@ import 'package:retrofit_graphql/src/model/gq_controller.dart';
 import 'package:retrofit_graphql/src/model/gq_directive.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
 import 'package:retrofit_graphql/src/model/gq_directives_mixin.dart';
-import 'package:retrofit_graphql/src/model/gq_input_type_definition.dart';
-import 'package:retrofit_graphql/src/model/gq_scalar_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_service.dart';
 import 'package:retrofit_graphql/src/model/gq_shcema_mapping.dart';
 import 'package:retrofit_graphql/src/model/gq_enum_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_fragment.dart';
-import 'package:retrofit_graphql/src/model/gq_interface.dart';
+import 'package:retrofit_graphql/src/model/gq_interface_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_token.dart';
 import 'package:retrofit_graphql/src/model/gq_type.dart';
 import 'package:retrofit_graphql/src/model/gq_type_definition.dart';
@@ -546,7 +544,9 @@ extension GQGrammarExtension on GQGrammar {
               var currentDef = projectedTypes[e.token];
               if (currentDef != null) {
                 currentDef.interfaceNames.forEach(definition.addInterfaceName);
-                currentDef.implementations.forEach(definition.addImplementation);
+                if (currentDef is GQInterfaceDefinition && definition is GQInterfaceDefinition) {
+                  currentDef.implementations.forEach(definition.addImplementation);
+                }
               }
               projectedTypes[e.token] = definition;
             });
@@ -576,7 +576,9 @@ extension GQGrammarExtension on GQGrammar {
         var first = similarDefinitions.first;
         first.addOriginalToken(definition.token);
         definition.interfaceNames.forEach(first.addInterfaceName);
-        definition.implementations.forEach(first.addImplementation);
+        if (definition is GQInterfaceDefinition && first is GQInterfaceDefinition) {
+          definition.implementations.forEach(first.addImplementation);
+        }
         projectedTypes[first.token] = first;
         return first;
       }

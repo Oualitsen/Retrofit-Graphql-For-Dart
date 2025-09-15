@@ -42,9 +42,10 @@ void main() async {
     final text = File("test/example2/schema.graphql").readAsStringSync();
     var result = g.parse(text);
     expect(result is Success, true);
-    var clientGen = DartClientSerializer(g);
     var serializer = DartSerializer(g);
-    var client = clientGen.generateClient();
+
+    var clientGen = DartClientSerializer(g, serializer);
+    var client = clientGen.generateClient("package");
     var types = g.types.values.map((t) => serializer.serializeTypeDefinition(t, "")).join("\n");
     var inputs = g.inputs.values.map((t) => serializer.serializeInputDefinition(t, "")).join("\n");
     var enums = g.enums.values.map((t) => serializer.serializeEnumDefinition(t, "")).join("\n");

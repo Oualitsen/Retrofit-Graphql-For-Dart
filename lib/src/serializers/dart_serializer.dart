@@ -3,7 +3,7 @@ import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/gq_enum_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
 import 'package:retrofit_graphql/src/model/gq_input_type_definition.dart';
-import 'package:retrofit_graphql/src/model/gq_interface.dart';
+import 'package:retrofit_graphql/src/model/gq_interface_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_token.dart';
 import 'package:retrofit_graphql/src/model/gq_token_with_fields.dart';
 import 'package:retrofit_graphql/src/model/gq_type.dart';
@@ -236,7 +236,7 @@ ${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
 
   String _doSerializeTypeDefinition(GQTypeDefinition def) {
     final token = def.token;
-    final implementations = def.implementations;
+    final implementations = def is GQInterfaceDefinition ? def.implementations : <GQTypeDefinition>{};
 
     final interfaceNames = def.interfaceNames.map((e) => e.token).toSet();
     interfaceNames.addAll(implementations.map((e) => e.token));
@@ -383,23 +383,23 @@ ${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
 
   @override
   String getFileNameFor(GQToken token) {
-    return "${token.token}.dart";
+    return "${token.token.toSnakeCase()}.dart";
   }
 
   @override
   String serializeImportToken(GQToken token, String importPrefix) {
     String? init;
     if (token is GQEnumDefinition) {
-      init = "enums/${serializeImport(token.token)}";
+      init = "enums/${getFileNameFor(token)}";
     } else if (token is GQInterfaceDefinition) {
-      init = "interfaces/${serializeImport(token.token)}";
+      init = "interfaces/${getFileNameFor(token)}";
     } else if (token is GQTypeDefinition) {
-      init = "types/${serializeImport(token.token)}";
+      init = "types/${getFileNameFor(token)}";
     } else if (token is GQInputDefinition) {
-      init = "interfaces/${serializeImport(token.token)}";
+      init = "inputs/${getFileNameFor(token)}";
     }
 
-    return "${importPrefix}/${init}";
+    return "import '${importPrefix}/${init}';";
   }
 
   @override

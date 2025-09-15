@@ -1,7 +1,7 @@
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 import 'package:retrofit_graphql/src/model/gq_directives_mixin.dart';
-import 'package:retrofit_graphql/src/model/gq_interface.dart';
+import 'package:retrofit_graphql/src/model/gq_interface_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_token.dart';
 import 'package:retrofit_graphql/src/model/gq_token_with_fields.dart';
 
@@ -28,8 +28,8 @@ class GQRepository extends GQInterfaceDefinition {
   Set<GQToken> getImportDependecies(GQGrammar g) {
     var result = {...super.getImportDependecies(g)};
     var repoDir = getDirectiveByName(gqRepository)!;
-    var token1 = _addDepencuy(g, repoDir.getArgValueAsString(gqType));
-    var token2 = _addDepencuy(g, repoDir.getArgValueAsString(gqIdType));
+    var token1 = _addDepency(g, repoDir.getArgValueAsString(gqType));
+    var token2 = _addDepency(g, repoDir.getArgValueAsString(gqIdType));
     result.addAll([if (token1 != null) token1, if (token2 != null) token2]);
     return result;
   }
@@ -53,7 +53,7 @@ class GQRepository extends GQInterfaceDefinition {
     return {};
   }
 
-  GQToken? _addDepencuy(GQGrammar g, String? key) {
+  GQToken? _addDepency(GQGrammar g, String? key) {
     if (key == null) {
       return null;
     }
@@ -61,5 +61,6 @@ class GQRepository extends GQInterfaceDefinition {
     if (filterDependecy(repoTypeToken, g)) {
       return repoTypeToken;
     }
+    return null;
   }
 }

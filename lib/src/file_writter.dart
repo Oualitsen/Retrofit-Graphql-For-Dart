@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:retrofit_graphql/src/config.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/io_utils.dart';
-import 'package:retrofit_graphql/src/model/gq_token.dart';
 import 'package:retrofit_graphql/src/serializers/graphq_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/java_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/spring_server_serializer.dart';
@@ -38,7 +37,7 @@ class FileWritter {
         .forEach((def) {
       var packageName = config.serverConfig!.spring!.basePackage;
       var text = serializer.serializeToken(def, packageName);
-      var imports = serializer.serializeImports(def as GQToken, destinationDir);
+      var imports = serializer.serializeImports(def, destinationDir);
       var fileName = serializer.getFileNameFor(def);
       var path = '${destinationDir}/${fileName}';
       var buffer = StringBuffer();

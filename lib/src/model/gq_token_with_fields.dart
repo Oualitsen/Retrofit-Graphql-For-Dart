@@ -141,7 +141,10 @@ abstract class GQTokenWithFields extends GQToken {
     // is it external ?
     var external = dir.getDirectiveByName(gqExternal);
     if (external != null) {
-      result.add(external.getArgValueAsString(gqImport) ?? external.getArgValueAsString(gqClass)!);
+      var externalImport = external.getArgValueAsString(gqImport);
+      if (externalImport != null) {
+        result.add(externalImport);
+      }
     }
     // does it have imports
     dir

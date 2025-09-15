@@ -1,3 +1,4 @@
+import 'package:retrofit_graphql/src/constants.dart';
 import 'package:retrofit_graphql/src/extensions.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
@@ -5,7 +6,7 @@ import 'package:retrofit_graphql/src/model/gq_argument.dart';
 import 'package:retrofit_graphql/src/model/gq_enum_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
 import 'package:retrofit_graphql/src/model/gq_input_type_definition.dart';
-import 'package:retrofit_graphql/src/model/gq_interface.dart';
+import 'package:retrofit_graphql/src/model/gq_interface_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_token.dart';
 import 'package:retrofit_graphql/src/model/gq_token_with_fields.dart';
 import 'package:retrofit_graphql/src/model/gq_type.dart';
@@ -114,7 +115,7 @@ class JavaSerializer extends GqSerializer {
     buffer.writeln("public static ${def.token} fromJson(String value) {");
     buffer.writeln("return Optional.ofNullable(value).map(${def.token}::valueOf).orElse(null);".ident());
     buffer.writeln("}");
-    def.addImport("java.util.Optional");
+    def.addImport(JavaImports.optional);
     return buffer.toString();
   }
 
@@ -178,7 +179,7 @@ class JavaSerializer extends GqSerializer {
   }) {
     if (gqType is GQListType) {
       if (reactive) {
-        context?.addImport("reactor.core.publisher.Flux");
+        context?.addImport(JavaImports.flux);
         return "Flux<${convertPrimitiveToBoxed(serializeTypeReactive(gqType: gqType.inlineType, context: context))}>";
       }
       if (asArray) {
@@ -191,7 +192,7 @@ class JavaSerializer extends GqSerializer {
 
     var type = getTypeNameFromGQExternal(token) ?? token;
     if (reactive) {
-      context?.addImport("reactor.core.publisher.Mono");
+      context?.addImport(JavaImports.mono);
       return "Mono<${convertPrimitiveToBoxed(type)}>";
     }
     if (typeIsJavaPrimitive(type) && (gqType.nullable || forceNullable)) {
@@ -284,7 +285,7 @@ ${generateFromJson(def.getSerializableFields(mode), def.token, def).ident()}
           'map(${newVarName} -> ${getFromJsonCall(field, newVarName, depth + 1, context, type.inlineType)})';
       var finalResult =
           '$nullCheckStatement (${targetCast}${varName}${callMapDotGet}).stream().${mapFunction}.${_toList}';
-      context.addImport("java.util.stream.Collectors");
+      context.addImport(JavaImports.collectors);
       return finalResult;
     }
     String result;
@@ -333,8 +334,8 @@ ${generateFromJson(def.getSerializableFields(mode), def.token, def).ident()}
     }
     buffer.writeln("return map;".ident());
     buffer.writeln("}");
-    context.addImport("java.util.HashMap");
-    context.addImport("java.util.Map");
+    context.addImport(JavaImports.hasMap);
+    context.addImport(JavaImports.map);
 
     return buffer.toString();
   }
@@ -361,7 +362,7 @@ ${generateFromJson(def.getSerializableFields(mode), def.token, def).ident()}
       if (field.getDirectiveByName(gqArray) != null) {
         // array
         String method = "Stream.of(${variableName}).map(${varName} -> ${inlineCallToJson}).${_toList}";
-        context.addImport("java.util.stream.Stream");
+        context.addImport(JavaImports.stream);
         return "${variableName} == null ? null : $method";
       } else {
         // list
@@ -372,7 +373,7 @@ ${generateFromJson(def.getSerializableFields(mode), def.token, def).ident()}
         } else {
           method = "stream().map(${varName} -> ${inlineCallToJson}).${_toList}";
         }
-        context.addImport("java.util.stream.Collectors");
+        context.addImport(JavaImports.collectors);
 
         return safeCall(variableName, method, type.nullable);
       }
@@ -391,7 +392,7 @@ ${generateFromJson(def.getSerializableFields(mode), def.token, def).ident()}
           fields.where((e) => !e.type.nullable).map((e) => "Objects.requireNonNull(${e.name});").toList();
       if (checkingFields.isNotEmpty) {
         nullCheck = serializeListText(checkingFields, join: "\n", withParenthesis: false);
-        context.addImport("java.util.Objects");
+        context.addImport(JavaImports.objects);
       } else {
         nullCheck = "";
       }
@@ -544,7 +545,7 @@ $result
     final setStatement = "this.${field.name} = ${field.name};";
 
     if (!field.type.nullable && checkForNulls) {
-      context.addImport("java.util.Objects");
+      context.addImport(JavaImports.objects);
       nullCheck = "Objects.requireNonNull(${field.name});";
     }
     var statements = [if (nullCheck != null) nullCheck, setStatement];
@@ -666,7 +667,7 @@ ${'return java.util.Objects.hash(${fields.join(", ")});'.ident()}
     }
     // toJson
     if (generateJsonMethods) {
-      interface.addImport("java.util.Map");
+      interface.addImport(JavaImports.map);
       buffer.writeln("Map<String, Object> toJson();".ident());
     }
     // fromJson to Json

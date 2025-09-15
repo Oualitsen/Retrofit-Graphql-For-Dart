@@ -1,5 +1,8 @@
+import 'package:retrofit_graphql/src/constants.dart';
 import 'package:retrofit_graphql/src/extensions.dart';
 import 'package:retrofit_graphql/src/model/gq_token_with_fields.dart';
+import 'package:retrofit_graphql/src/serializers/dart_client_serializer.dart';
+import 'package:retrofit_graphql/src/serializers/dart_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/java_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
 import 'package:retrofit_graphql/src/serializers/spring_server_serializer.dart';
@@ -460,5 +463,102 @@ directive @gqExternal(gqClass: String!, gqImport: String!) on  OBJECT|INPUT_OBJE
     expect(parsed is Success, true);
     var carService = g.services["MyService"]!;
     expect(carService.getImportDependecies(g).map((e) => e.token), contains("PagingInfo"));
+  });
+
+  test("interface must import implementations when fromJson is present", () {
+    final GQGrammar g =
+        GQGrammar(generateAllFieldsFragments: true, mode: CodeGenerationMode.client, autoGenerateQueries: true);
+    var parsed = g.parse('''
+
+interface Animal {
+  name: String
+}
+
+type Cat implements Animal {
+  name: String
+}
+
+
+ type Query {
+  getAnimal: Animal
+ }
+
+''');
+    expect(parsed is Success, true);
+    var animal = g.projectedTypes['Animal']!;
+    expect(animal.getImportDependecies(g).map((e) => e.token), containsAll(["Cat"]));
+  });
+
+  test("Client should import responses", () {
+    final GQGrammar g =
+        GQGrammar(generateAllFieldsFragments: true, mode: CodeGenerationMode.client, autoGenerateQueries: true);
+    var serilazer = DartSerializer(g);
+    var clientGen = DartClientSerializer(g, serilazer);
+
+    var parsed = g.parse('''
+  ${clientObjects}
+
+type Cat  {
+  name: String
+}
+
+ type Query {
+  getAnimal: Cat
+  getCat: Cat
+  getCount: Int!
+ }
+
+''');
+    expect(parsed is Success, true);
+    expect(clientGen.getImportDependecies(g).map((e) => e.token),
+        containsAll(["GetAnimalResponse", "GetCatResponse", "GetCountResponse"]));
+  });
+
+  test("Client should import inputs", () {
+    final GQGrammar g =
+        GQGrammar(generateAllFieldsFragments: true, mode: CodeGenerationMode.client, autoGenerateQueries: true);
+    var serilazer = DartSerializer(g);
+    var clientGen = DartClientSerializer(g, serilazer);
+
+    var parsed = g.parse('''
+  ${clientObjects}
+
+type Cat  {
+  name: String
+}
+ input CatInput {
+  name: String!
+ }
+
+
+ type Mutation {
+  createCat(input: CatInput!): Cat!
+ }
+
+''');
+    expect(parsed is Success, true);
+    print(clientGen.generateClient("mypackage"));
+    expect(clientGen.getImportDependecies(g).map((e) => e.token), containsAll(["CatInput"]));
+  });
+
+  test("Client should import enums", () {
+    final GQGrammar g =
+        GQGrammar(generateAllFieldsFragments: true, mode: CodeGenerationMode.client, autoGenerateQueries: true);
+    var serilazer = DartSerializer(g);
+    var clientGen = DartClientSerializer(g, serilazer);
+
+    var parsed = g.parse('''
+  ${clientObjects}
+enum Gender {male, female}
+type Cat  {
+  name: String
+}
+type Query {
+  getCatsByGender(gender: Gender!): [Cat!]!
+}
+
+''');
+    expect(parsed is Success, true);
+    expect(clientGen.getImportDependecies(g).map((e) => e.token), containsAll(["Gender"]));
   });
 }

@@ -86,6 +86,8 @@ class GQQueryDefinition extends GQToken with GQDirectivesMixin {
     _gqTypeDefinition = def;
   }
 
+  GQTypeDefinition? get typeDefinition => _gqTypeDefinition;
+
   String _getGeneratedTypeName() {
     return getNameValueFromDirectives(getDirectives()) ?? "${_capitilizedFirstLetterToken}Response";
   }

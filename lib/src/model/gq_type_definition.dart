@@ -2,7 +2,7 @@ import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/gq_directive.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
 import 'package:retrofit_graphql/src/model/gq_directives_mixin.dart';
-import 'package:retrofit_graphql/src/model/gq_interface.dart';
+import 'package:retrofit_graphql/src/model/gq_interface_definition.dart';
 import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 import 'package:retrofit_graphql/src/model/gq_token.dart';
 import 'package:retrofit_graphql/src/model/gq_token_with_fields.dart';
@@ -16,12 +16,6 @@ class GQTypeDefinition extends GQTokenWithFields with GQDirectivesMixin {
   final GQTypeDefinition? derivedFromType;
 
   final Set<String> _originalTokens = <String>{};
-
-  ///
-  /// Used only when generating type for interfaces.
-  /// This will be a super class of one or more base types.
-  ///
-  final Set<GQTypeDefinition> _implementations = {};
 
   GQTypeDefinition({
     required TokenInfo name,
@@ -39,7 +33,6 @@ class GQTypeDefinition extends GQTokenWithFields with GQDirectivesMixin {
   Set<GQInterfaceDefinition> get interfaces => Set.unmodifiable(_interfaces);
   Set<TokenInfo> get interfaceNames => Set.unmodifiable(_interfaceNames);
   Set<String> get originalTokens => Set.unmodifiable(_originalTokens);
-  Set<GQTypeDefinition> get implementations => Set.unmodifiable(_implementations);
 
   void addInterfaceName(TokenInfo token) {
     _interfaceNames.add(token);
@@ -51,10 +44,6 @@ class GQTypeDefinition extends GQTokenWithFields with GQDirectivesMixin {
 
   void addOriginalToken(String token) {
     _originalTokens.add(token);
-  }
-
-  void addImplementation(GQTypeDefinition token) {
-    _implementations.add(token);
   }
 
   ///
