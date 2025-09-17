@@ -13,7 +13,8 @@ import 'package:retrofit_graphql/src/serializers/gq_serializer.dart';
 import 'package:retrofit_graphql/src/utils.dart';
 
 class DartSerializer extends GqSerializer {
-  DartSerializer(super.grammar) {
+  final bool generateJsonMethods;
+  DartSerializer(super.grammar, this.generateJsonMethods) {
     _initAnnotations();
   }
 
@@ -89,18 +90,26 @@ class DartSerializer extends GqSerializer {
 
   @override
   String doSerializeInputDefinition(GQInputDefinition def) {
-    return """
-${serializeDecorators(def.getDirectives())}
-class ${def.tokenInfo} {
-${serializeListText(def.getSerializableFields(grammar.mode).map((e) => serializeField(e)).toList(), join: "\n", withParenthesis: false).ident()}
-        
-${'${def.tokenInfo}({${def.getSerializableFields(grammar.mode).map((e) => toConstructorDeclaration(e)).join(", ")}});'.ident()}
-        
-${generateToJson(def.getSerializableFields(mode)).ident()}
-
-${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
-}
-""";
+    var buffer = StringBuffer();
+    var decorators = serializeDecorators(def.getDirectives());
+    if (decorators.isNotEmpty) {
+      buffer.writeln(decorators.trim());
+    }
+    buffer.writeln('class ${def.tokenInfo} {');
+    buffer.writeln(serializeListText(def.getSerializableFields(grammar.mode).map((e) => serializeField(e)).toList(),
+            join: "\n", withParenthesis: false)
+        .ident());
+    buffer.writeln(
+        '${def.tokenInfo}({${def.getSerializableFields(grammar.mode).map((e) => toConstructorDeclaration(e)).join(", ")}});'
+            .ident());
+    if (generateJsonMethods) {
+      buffer.writeln();
+      buffer.writeln(generateToJson(def.getSerializableFields(mode)).ident());
+      buffer.writeln();
+      buffer.writeln(generateFromJson(def.getSerializableFields(mode), def.token).ident());
+    }
+    buffer.writeln('}');
+    return buffer.toString();
   }
 
   String toConstructorDeclaration(GQField field) {
@@ -112,6 +121,9 @@ ${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
   }
 
   String generateFromJson(List<GQField> fields, String token) {
+    if (!generateJsonMethods) {
+      return "";
+    }
     var buffer = StringBuffer("static ${token} fromJson(Map<String, dynamic> json) {");
     buffer.writeln();
     buffer.writeln("return ${token}(".ident());
@@ -264,10 +276,11 @@ ${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
     if (equalsHascodeCode.isNotEmpty) {
       buffer.writeln(equalsHascodeCode.ident());
     }
-
-    buffer.writeln(generateToJson(def.getSerializableFields(mode)).ident());
-    buffer.writeln(generateFromJson(def.getSerializableFields(mode), def.token).ident());
-
+    if (generateJsonMethods) {
+      buffer.writeln(generateToJson(def.getSerializableFields(mode)).ident());
+      buffer.writeln();
+      buffer.writeln(generateFromJson(def.getSerializableFields(mode), def.token).ident());
+    }
     buffer.writeln("}");
     return buffer.toString();
   }
@@ -322,9 +335,6 @@ ${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
   }
 
   static String _serializeFromJsonForInterface(String token, Set<GQTypeDefinition> implementations) {
-    if (implementations.isEmpty) {
-      return "";
-    }
     var buffer = StringBuffer("static ${token} fromJson(Map<String, dynamic> json) {");
     buffer.writeln();
 
@@ -368,8 +378,10 @@ ${generateFromJson(def.getSerializableFields(mode), def.token).ident()}
       buffer.writeln("${serializeGetterDeclaration(field)};".ident());
     }
 
-    buffer.writeln(_serializeToJsonForInterface(token).ident());
-    if (interface.implementations.isNotEmpty) {
+    if (generateJsonMethods) {
+      buffer.writeln(_serializeToJsonForInterface(token).ident());
+    }
+    if (generateJsonMethods && interface.implementations.isNotEmpty) {
       buffer.writeln(_serializeFromJsonForInterface(token, interface.implementations).ident());
     }
 

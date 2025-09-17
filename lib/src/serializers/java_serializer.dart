@@ -610,19 +610,20 @@ ${generateFromJson(def.getSerializableFields(grammar.mode), def.token, def).iden
 
   String equalsHascodeCode(GQTypeDefinition def, Set<String> fields) {
     final token = def.tokenInfo;
-    return """
-@Override
-public boolean equals(Object o) {
-${'if (!(o instanceof $token)) return false;'.ident()}
-${'$token o2 = ($token) o;'.ident()}
-${'return ${fields.map((e) => "java.util.Objects.equals($e, o2.$e);").join(" && ")}'.ident()}
-}
-
-@Override
-public int hashCode() {
-${'return java.util.Objects.hash(${fields.join(", ")});'.ident()}
-}   
-  """;
+    def.addImport("java.util.Objects");
+    var buffer = StringBuffer();
+    buffer.writeln('@Override');
+    buffer.writeln('public boolean equals(Object o) {');
+    buffer.writeln('if (!(o instanceof $token)) return false;'.ident());
+    buffer.writeln('$token o2 = ($token) o;'.ident());
+    buffer.writeln('return ${fields.map((e) => "Objects.equals($e, o2.$e);").join(" && ")}'.ident());
+    buffer.writeln('}');
+    buffer.writeln();
+    buffer.writeln('@Override');
+    buffer.writeln('public int hashCode() {');
+    buffer.writeln('return Objects.hash(${fields.join(", ")});'.ident());
+    buffer.writeln('}');
+    return buffer.toString();
   }
 
   static String _serializeImplements(Set<String> interfaceNames) {
@@ -648,11 +649,11 @@ ${'return java.util.Objects.hash(${fields.join(", ")});'.ident()}
     buffer.writeln(" {");
     buffer.writeln();
     for (var f in fields) {
+      var fieldDecorators = serializeDecorators(f.getDirectives(), joiner: "\n");
+      if (fieldDecorators.isNotEmpty) {
+        buffer.writeln(fieldDecorators.trim().ident());
+      }
       if (getters) {
-        var fieldDecorators = serializeDecorators(f.getDirectives(), joiner: "\n");
-        if (fieldDecorators.isNotEmpty) {
-          buffer.write(fieldDecorators.ident());
-        }
         if (typesAsRecords) {
           buffer.write(serializeGetterDeclaration(f, skipModifier: true, asProperty: true).ident());
         } else {

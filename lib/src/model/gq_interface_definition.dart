@@ -30,10 +30,4 @@ class GQInterfaceDefinition extends GQTypeDefinition {
   void addImplementation(GQTypeDefinition token) {
     _implementations.add(token);
   }
-
-  @override
-  Set<GQToken> getImportDependecies(GQGrammar g) {
-    var result = {...super.getImportDependecies(g), ...implementations};
-    return result;
-  }
 }
