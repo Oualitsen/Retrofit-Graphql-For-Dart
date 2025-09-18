@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math';
 
 import 'package:retrofit_graphql/src/excpetions/parse_exception.dart';
 import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
