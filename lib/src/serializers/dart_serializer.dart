@@ -13,8 +13,9 @@ import 'package:retrofit_graphql/src/serializers/gq_serializer.dart';
 import 'package:retrofit_graphql/src/utils.dart';
 
 class DartSerializer extends GqSerializer {
+  @override
   final bool generateJsonMethods;
-  DartSerializer(super.grammar, this.generateJsonMethods) {
+  DartSerializer(super.grammar, {this.generateJsonMethods = true}) {
     _initAnnotations();
   }
 
@@ -295,18 +296,18 @@ class DartSerializer extends GqSerializer {
 
   String equalsHascodeCode(GQTypeDefinition def, Set<String> fields) {
     final token = def.tokenInfo;
-    return """\n\n
-    @override
-    bool operator ==(Object other) {
-      if (identical(this, other)) return true;
-
-      return other is $token &&
-          ${fields.map((e) => "$e == other.$e").join(" && ")};
-    }
-
-    @override
-    int get hashCode => Object.hashAll([${fields.join(", ")}]);
-  """;
+    var buffer = StringBuffer();
+    buffer.writeln('@override');
+    buffer.writeln('bool operator ==(Object other) {');
+    buffer.writeln('if (identical(this, other)) return true;'.ident());
+    buffer.writeln('return other is $token &&'.ident());
+    buffer.write(fields.map((e) => "$e == other.$e").join(" && ").ident());
+    buffer.writeln(';');
+    buffer.writeln('}');
+    buffer.writeln();
+    buffer.writeln('@override');
+    buffer.writeln('int get hashCode => Object.hashAll([${fields.join(", ")}]);');
+    return buffer.toString();
   }
 
   String serializeContructorArgs(GQTypeDefinition def, GQGrammar grammar) {
@@ -367,7 +368,7 @@ class DartSerializer extends GqSerializer {
     var buffer = StringBuffer();
     var decorators = serializeDecorators(interface.getDirectives());
     if (decorators.isNotEmpty) {
-      buffer.writeln(decorators);
+      buffer.writeln(decorators.trim());
     }
     buffer.write("abstract class $token ");
     if (interfaces.isNotEmpty) {
@@ -375,6 +376,10 @@ class DartSerializer extends GqSerializer {
     }
     buffer.writeln("{");
     for (var field in fields) {
+      var fieldDecorators = serializeDecorators(field.getDirectives());
+      if (fieldDecorators.isNotEmpty) {
+        buffer.writeln(fieldDecorators.trim().ident());
+      }
       buffer.writeln("${serializeGetterDeclaration(field)};".ident());
     }
 
