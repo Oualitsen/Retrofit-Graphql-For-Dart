@@ -20,6 +20,7 @@ class GQType extends GQToken {
   }
 
   GQType get inlineType => this;
+  GQType get firstType => this;
 
   bool get isList => this is GQListType;
 
@@ -39,4 +40,10 @@ class GQListType extends GQType {
 
   @override
   GQType get inlineType => type;
+
+  ///
+  /// a recursive way to find the first TYPE even if this is a list of list of list .... of list of TYPE
+  ///
+  @override
+  GQType get firstType => type.firstType;
 }

@@ -250,13 +250,13 @@ GQGrammar createGrammar(GeneratorConfig config) {
   }
 }
 
-Future<Set<String>> generateClientClasses(GQGrammar grammar, GeneratorConfig config, DateTime started) async {
+Future<Set<String>> generateClientClasses(GQGrammar grammar, GeneratorConfig config, DateTime started, {String? pack, noClient = true}) async {
   final DartSerializer serializer = DartSerializer(grammar, generateJsonMethods: true);
   final dcs = DartClientSerializer(grammar, serializer);
   final List<Future<File>> futures = [];
   final destinationDir = config.outputDir;
   final packageName = config.clientConfig?.packageName;
-  final prefix = "package:${packageName}/${config.outputDir.replaceFirst("lib/", "")}";
+  final prefix = "package:${packageName}/${(pack ?? config.outputDir).replaceFirst("lib/", "")}";
 
   grammar.enums.forEach((k, def) {
     var text = serializer.serializeEnumDefinition(def, "");
@@ -293,7 +293,7 @@ Future<Set<String>> generateClientClasses(GQGrammar grammar, GeneratorConfig con
         destinationDir: destinationDir);
     futures.add(r);
   });
-
+  if(!noClient){
   String client = dcs.generateClient(prefix);
   var r = writeToFile(
       data: client,
@@ -301,7 +301,7 @@ Future<Set<String>> generateClientClasses(GQGrammar grammar, GeneratorConfig con
       subdir: 'client',
       imports: [],
       destinationDir: destinationDir);
-  futures.add(r);
+  futures.add(r);}
   var result = await Future.wait(futures);
   stdout.writeln("Generated ${futures.length} files in ${formatElapsedTime(started)}");
   var paths = result.map((f) => f.path).toSet();
