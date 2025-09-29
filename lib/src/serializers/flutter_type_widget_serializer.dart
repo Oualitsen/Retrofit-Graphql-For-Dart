@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:retrofit_graphql/src/extensions.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/gq_field.dart';
