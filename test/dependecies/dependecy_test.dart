@@ -672,34 +672,34 @@ type Query {
     expect(repo.getImports(g), isNot(contains("lombok.experimental.FieldNameConstants")));
   });
 
-  test("mapping service should import dependcies", () {
+  test("mapping service should import batch dependecies", () {
     final GQGrammar g = GQGrammar(mode: CodeGenerationMode.server);
 
     var parsed = g.parse('''
   ${clientObjects}
 
-  
-
-type Person  {
-  id: String
-  cars: [Car] @gqSkipOnServer
-  carId: String!
-}
-
-type Car {
-  make: String
-  model: String
-}
-
-
-
-type Query {
-  findPerson: [Person!]! @gqServiceName(name: "MainService")
-}
+  type PersonCar @gqSkipOnServer(mapTo: "Person") {
+    person: Person!
+    car: Car
+  }
+  type Person  {
+    name: String
+  }
+  type Car {
+    make: String
+  }
+  type Query {
+    findPerson: [PersonCar!]! @gqServiceName(name: "MainService")  ### it should be a batch with a skipped Type response
+  }
 ''');
     expect(parsed is Success, true);
-    var mappingService = g.services[g.serviceMappingName("Person")]!;
     var serializer = SpringServerSerializer(g);
-    print(serializer.serializeService(mappingService, "myorg"));
+    var mappingService = g.services[g.serviceMappingName("PersonCar")]!;
+    g.services.values.forEach((s) {
+      print(serializer.serializeService(s, "myorg"));
+      print("_________________________________________________");
+    });
+    expect(mappingService.getImportDependecies(g).map((e) => e.token), containsAll(["Person", "Car"]));
+
   });
 }

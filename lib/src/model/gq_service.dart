@@ -4,6 +4,7 @@ import 'package:retrofit_graphql/src/model/gq_interface_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_queries.dart';
 import 'package:retrofit_graphql/src/model/gq_shcema_mapping.dart';
 import 'package:retrofit_graphql/src/model/gq_token.dart';
+import 'package:retrofit_graphql/src/model/gq_token_with_fields.dart';
 
 class GQService extends GQInterfaceDefinition {
   final Map<String, GQQueryType> _fieldType = {};
@@ -59,5 +60,9 @@ class GQService extends GQInterfaceDefinition {
       }
     }
     return result;
+  }
+
+  List<GQToken> getTokenFields(GQToken? typeToken) {
+
   }
 }
