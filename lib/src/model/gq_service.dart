@@ -36,8 +36,12 @@ class GQService extends GQInterfaceDefinition {
 
   @override
   Set<GQToken> getImportDependecies(GQGrammar g) {
-    var result = {...super.getImportDependecies(g)};
     var mappings = this is GQController ? this.mappings : serviceMapping;
+    if (mappings.isEmpty) {
+      return super.getImportDependecies(g);
+    }
+    var result = {...super.getImportDependecies(g)};
+
     for (var m in mappings) {
       var typeToken = g.getTokenByKey(m.type.token);
       if (filterDependecy(typeToken, g)) {

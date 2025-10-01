@@ -671,4 +671,35 @@ type Query {
     // repo should NOT import lombok.experimental.FieldNameConstants
     expect(repo.getImports(g), isNot(contains("lombok.experimental.FieldNameConstants")));
   });
+
+  test("mapping service should import dependcies", () {
+    final GQGrammar g = GQGrammar(mode: CodeGenerationMode.server);
+
+    var parsed = g.parse('''
+  ${clientObjects}
+
+  
+
+type Person  {
+  id: String
+  cars: [Car] @gqSkipOnServer
+  carId: String!
+}
+
+type Car {
+  make: String
+  model: String
+}
+
+
+
+type Query {
+  findPerson: [Person!]! @gqServiceName(name: "MainService")
+}
+''');
+    expect(parsed is Success, true);
+    var mappingService = g.services[g.serviceMappingName("Person")]!;
+    var serializer = SpringServerSerializer(g);
+    print(serializer.serializeService(mappingService, "myorg"));
+  });
 }

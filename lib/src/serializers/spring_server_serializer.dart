@@ -182,9 +182,7 @@ $result
       buffer.writeln(";");
       buffer.writeln();
     }
-    if (mappings.isNotEmpty) {
-      buffer.writeln('// schema mappings and batch mapping'.ident());
-    }
+
     for (var m in mappings) {
       buffer.write(serializeMappingImplMethodHeader(m, service, skipAnnotation: true, skipQualifier: true).ident());
       buffer.writeln(";");
