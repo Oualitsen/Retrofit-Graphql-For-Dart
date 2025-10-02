@@ -3,7 +3,6 @@ import 'package:retrofit_graphql/src/extensions.dart';
 import 'package:retrofit_graphql/src/model/gq_token_with_fields.dart';
 import 'package:retrofit_graphql/src/serializers/dart_client_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/dart_serializer.dart';
-import 'package:retrofit_graphql/src/serializers/java_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
 import 'package:retrofit_graphql/src/serializers/spring_server_serializer.dart';
 import 'package:test/test.dart';
@@ -693,13 +692,43 @@ type Query {
   }
 ''');
     expect(parsed is Success, true);
-    var serializer = SpringServerSerializer(g);
     var mappingService = g.services[g.serviceMappingName("PersonCar")]!;
-    g.services.values.forEach((s) {
-      print(serializer.serializeService(s, "myorg"));
-      print("_________________________________________________");
-    });
     expect(mappingService.getImportDependecies(g).map((e) => e.token), containsAll(["Person", "Car"]));
+  });
 
+  test("mapping service should import batch dependecies recursive", () {
+    final GQGrammar g = GQGrammar(mode: CodeGenerationMode.server);
+
+    var parsed = g.parse('''
+  ${clientObjects}
+
+  type PersonCar @gqSkipOnServer(mapTo: "Person") {
+    person: Person!
+    car: Car
+    vehicle: Vehicle
+  }
+  type Person  {
+    name: String
+  }
+  type Car {
+    make: String
+  }
+  type Owner {
+    name: String
+  }
+
+  type Vehicle @gqSkipOnServer(mapTo: "Car") {
+    car: Car!
+    owner: Owner
+  }
+
+  type Query {
+    findPerson: [PersonCar!]! @gqServiceName(name: "MainService") 
+  }
+''');
+    expect(parsed is Success, true);
+    var personCarMappingService = g.services[g.serviceMappingName("PersonCar")]!;
+    expect(personCarMappingService.getImportDependecies(g).map((e) => e.token), isNot(contains("Vehicle")));
+    expect(personCarMappingService.getImportDependecies(g).map((e) => e.token), containsAll(["Person", "Car"]));
   });
 }
