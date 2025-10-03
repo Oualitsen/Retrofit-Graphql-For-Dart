@@ -9,50 +9,86 @@ import 'package:petitparser/petitparser.dart';
 
 const outputDir = "../my_web_app/lib/generated";
 
+getConfig(GQGrammar g) {
+  return GeneratorConfig(
+      schemaPaths: [],
+      mode: g.mode.name,
+      identityFields: [],
+      typeMappings: g.typeMap,
+      outputDir: outputDir,
+      clientConfig: ClientConfig(
+          targetLanguage: "dart",
+          generateAllFieldsFragments: g.generateAllFieldsFragments,
+          nullableFieldsRequired: false,
+          autoGenerateQueries: g.autoGenerateQueries,
+          operationNameAsParameter: false,
+          packageName: "my_web_app"));
+}
+
 void main() {
-  test("Fragment value test", () async {
+  test("UI View gen", () async {
     var g = GQGrammar(
         autoGenerateQueries: true,
         mode: CodeGenerationMode.client,
         generateAllFieldsFragments: true);
     var result = g.parse('''
-  enum Gender {male, female}
-  type Person {
+  type SingleLabelData {
     name: String!
-    middleName: String
-    gender: Gender!
-    age: Int!
   }
 
   type Query {
-    getPerson: Person
+    getSingleLabelData: SingleLabelData
   }
 
 ''');
 
     expect(result is Success, true);
-    var type = g.types["Person"]!;
-    var dartSerialzer = DartSerializer(g);
-    var serial = FlutterTypeWidgetSerializer(g, dartSerialzer, false);
-    var typeSerial = serial.serializeType(type);
+    await generateClientClasses(g, getConfig(g), DateTime.now(),
+        pack: 'lib/generated');
+  });
 
-    var buffer = StringBuffer();
 
-    await generateClientClasses(
-        g,
-        GeneratorConfig(
-            schemaPaths: [],
-            mode: g.mode.name,
-            identityFields: [],
-            typeMappings: g.typeMap,
-            outputDir: outputDir,
-            clientConfig: ClientConfig(
-                targetLanguage: "dart",
-                generateAllFieldsFragments: g.generateAllFieldsFragments,
-                nullableFieldsRequired: false,
-                autoGenerateQueries: g.autoGenerateQueries,
-                operationNameAsParameter: false,
-                packageName: "my_web_app")),
-        DateTime.now(), pack: 'lib/generated');
+  test("UI View gen enum", () async {
+    var g = GQGrammar(
+        autoGenerateQueries: true,
+        mode: CodeGenerationMode.client,
+        generateAllFieldsFragments: true);
+    var result = g.parse('''
+enum Gender {male, female}
+  type WidgetEnumValue {
+    gender: Gender
+  }
+
+  type Query {
+    getSingleLabelData: WidgetEnumValue
+  }
+
+''');
+
+    expect(result is Success, true);
+    await generateClientClasses(g, getConfig(g), DateTime.now(),
+        pack: 'lib/generated');
+  });
+
+
+  test("UI View gen nullable", () async {
+    var g = GQGrammar(
+        autoGenerateQueries: true,
+        mode: CodeGenerationMode.client,
+        generateAllFieldsFragments: true);
+    var result = g.parse('''
+  type SingleLabelDataNullable {
+    name: String
+  }
+
+  type Query {
+    getSingleLabelData: SingleLabelDataNullable
+  }
+
+''');
+
+    expect(result is Success, true);
+    await generateClientClasses(g, getConfig(g), DateTime.now(),
+        pack: 'lib/generated');
   });
 }

@@ -11,6 +11,7 @@ import 'package:retrofit_graphql/src/io_utils.dart';
 import 'package:retrofit_graphql/src/model/gq_interface_definition.dart';
 import 'package:retrofit_graphql/src/serializers/dart_client_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/dart_serializer.dart';
+import 'package:retrofit_graphql/src/serializers/flutter_type_widget_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/graphq_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/java_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
@@ -257,7 +258,7 @@ Future<Set<String>> generateClientClasses(GQGrammar grammar, GeneratorConfig con
   final destinationDir = config.outputDir;
   final packageName = config.clientConfig?.packageName;
   final prefix = "package:${packageName}/${(pack ?? config.outputDir).replaceFirst("lib/", "")}";
-
+  final viewSerializeer = FlutterTypeWidgetSerializer(grammar, serializer, true);
   grammar.enums.forEach((k, def) {
     var text = serializer.serializeEnumDefinition(def, "");
     var r = writeToFile(
@@ -293,6 +294,18 @@ Future<Set<String>> generateClientClasses(GQGrammar grammar, GeneratorConfig con
         destinationDir: destinationDir);
     futures.add(r);
   });
+
+  grammar.views.forEach((k, def) {
+    var text = viewSerializeer.serializeType(def, prefix);
+    var r = writeToFile(
+        data: text,
+        fileName: serializer.getFileNameFor(def),
+        subdir: "widgets",
+        imports: [],
+        destinationDir: destinationDir);
+    futures.add(r);
+  });
+
   if(!noClient){
   String client = dcs.generateClient(prefix);
   var r = writeToFile(
@@ -408,6 +421,7 @@ Future<Set<String>> generateServerClasses(GQGrammar grammar, GeneratorConfig con
         appendStar: true);
     futures.add(r);
   });
+
   if (springConfig.generateSchema) {
     var text = GraphqSerializer(grammar).generateSchema();
     var r = saveSource(data: text, path: springConfig.schemaTargetPath!, graphqlSource: true);
