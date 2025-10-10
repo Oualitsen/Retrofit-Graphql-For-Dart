@@ -23,6 +23,7 @@ import 'package:retrofit_graphql/src/model/gq_type_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_union.dart';
 import 'package:petitparser/petitparser.dart';
 import 'package:retrofit_graphql/src/model/token_info.dart';
+import 'package:retrofit_graphql/src/posiition_tracker.dart';
 import 'package:retrofit_graphql/src/serializers/graphq_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
 import 'package:retrofit_graphql/src/utils.dart';
@@ -37,7 +38,10 @@ class GQGrammar extends GrammarDefinition {
   var logger = Logger();
   static const typename = "__typename";
   static final typenameField = GQField(
-      name: typename.toToken(), type: GQType("String".toToken(), false, isScalar: true), arguments: [], directives: []);
+      name: typename.toToken(),
+      type: GQType("String".toToken(), false, isScalar: true),
+      arguments: [],
+      directives: []);
 
   // used to skip serialization
   final builtInScalars = {"ID", "Boolean", "Int", "Float", "String", "null"};
@@ -60,22 +64,30 @@ class GQGrammar extends GrammarDefinition {
 
   static const directivesToSkip = [gqTypeNameDirective, gqEqualsHashcode];
 
+  PositionTracker? _positionTracker;
+
   final Map<String, GQDirectiveDefinition> directives = {
     includeDirective: GQDirectiveDefinition(
       includeDirective.toToken(),
-      [GQArgumentDefinition("if".toToken(), GQType("Boolean".toToken(), false), [])],
+      [
+        GQArgumentDefinition(
+            "if".toToken(), GQType("Boolean".toToken(), false), [])
+      ],
       {GQDirectiveScope.FIELD},
     ),
     skipDirective: GQDirectiveDefinition(
       skipDirective.toToken(),
-      [GQArgumentDefinition("if".toToken(), GQType("Boolean".toToken(), false), [])],
+      [
+        GQArgumentDefinition(
+            "if".toToken(), GQType("Boolean".toToken(), false), [])
+      ],
       {GQDirectiveScope.FIELD},
     ),
     gqTypeNameDirective: GQDirectiveDefinition(
       gqTypeNameDirective.toToken(),
       [
-        GQArgumentDefinition(
-            gqTypeNameDirectiveArgumentName.toToken(), GQType("String".toToken(), false, isScalar: false), [])
+        GQArgumentDefinition(gqTypeNameDirectiveArgumentName.toToken(),
+            GQType("String".toToken(), false, isScalar: false), [])
       ],
       {
         GQDirectiveScope.INPUT_OBJECT,
@@ -87,7 +99,10 @@ class GQGrammar extends GrammarDefinition {
     ),
     gqEqualsHashcode: GQDirectiveDefinition(
       gqEqualsHashcode.toToken(),
-      [GQArgumentDefinition(gqEqualsHashcodeArgumentName.toToken(), GQType("[String]".toToken(), false), [])],
+      [
+        GQArgumentDefinition(gqEqualsHashcodeArgumentName.toToken(),
+            GQType("[String]".toToken(), false), [])
+      ],
       {GQDirectiveScope.OBJECT},
     ),
   };
@@ -157,7 +172,9 @@ class GQGrammar extends GrammarDefinition {
   List<GQSchemaMapping> getAllMappingsByType(String typeName) =>
       _schemaMappings.values.where((e) => e.type.token == typeName).toList();
   List<GQSchemaMapping> getServiceMappingByType(String typeName) =>
-      _schemaMappings.values.where((e) => e.type.token == typeName && !e.forbid && !e.identity).toList();
+      _schemaMappings.values
+          .where((e) => e.type.token == typeName && !e.forbid && !e.identity)
+          .toList();
 
   List<GQSchemaMapping> getSchemaMappings(GQTypeDefinition def) {
     return _schemaMappings.values.where((e) => e.type == def).toList();
@@ -167,7 +184,8 @@ class GQGrammar extends GrammarDefinition {
   bool get hasQueries => hasQueryType(GQQueryType.query);
   bool get hasMutations => hasQueryType(GQQueryType.mutation);
 
-  bool hasQueryType(GQQueryType type) => queries.values.where((query) => query.type == type).isNotEmpty;
+  bool hasQueryType(GQQueryType type) =>
+      queries.values.where((query) => query.type == type).isNotEmpty;
 
   String? lastParsedFile;
 
@@ -183,22 +201,26 @@ class GQGrammar extends GrammarDefinition {
 
   Result parse(String text) {
     var parser = buildFrom(fullGrammar().end());
+    _positionTracker = PositionTracker(text);
     return parser.parse(text);
   }
 
   Future<Result> parseFile(String path, {bool validate = true}) async {
     lastParsedFile = path;
     var text = await File(path).readAsString();
+
     _validate = validate;
     var result = parse(text);
     return result;
   }
 
-  Future<List<Result>> parseFiles(List<String> paths, {String? extraGql}) async {
+  Future<List<Result>> parseFiles(List<String> paths,
+      {String? extraGql}) async {
     var result = <Result>[];
 
     for (var path in paths) {
-      var parseResult = await parseFile(path, validate: extraGql == null && path == paths.last);
+      var parseResult = await parseFile(path,
+          validate: extraGql == null && path == paths.last);
       result.add(parseResult);
     }
     if (extraGql != null) {
@@ -272,20 +294,21 @@ class GQGrammar extends GrammarDefinition {
     );
   }
 
-  Parser<TokenInfo> capture(Parser parser) {
-    return parser.token().map((token) => TokenInfo.of(token, lastParsedFile));
-  }
-
   Parser<List<GQArgumentDefinition>> arguments({bool parametrized = false}) {
-    return seq3(openParen(), oneArgumentDefinition(parametrized: parametrized).star(), closeParen())
+    return seq3(
+            openParen(),
+            oneArgumentDefinition(parametrized: parametrized).star(),
+            closeParen())
         .map3((p0, argsDefinition, p2) => argsDefinition);
   }
 
   Parser<List<GQArgumentValue>> argumentValues() {
-    return seq3(openParen(), oneArgumentValue().star(), closeParen()).map3((p0, argValues, p2) => argValues);
+    return seq3(openParen(), oneArgumentValue().star(), closeParen())
+        .map3((p0, argValues, p2) => argValues);
   }
 
-  Parser<GQArgumentValue> oneArgumentValue() => (identifier() & colon() & ref1(token, initialValue())).map((value) {
+  Parser<GQArgumentValue> oneArgumentValue() =>
+      (identifier() & colon() & ref1(token, initialValue())).map((value) {
         return GQArgumentValue(value.first, value.last);
       });
 
@@ -308,7 +331,8 @@ class GQGrammar extends GrammarDefinition {
   Parser<String> queryKw() => "query".toParser();
   Parser<String> mutationKw() => "mutation".toParser();
   Parser<String> subscriptionKw() => "subscription".toParser();
-  Parser<TokenInfo> schemaKw() => "schema".toParser().token().map((t) => TokenInfo.of(t, lastParsedFile));
+  Parser<TokenInfo> schemaKw() =>
+      "schema".toParser().token().map((t) => TokenInfo.of(t, lastParsedFile));
   Parser<String> scalarKw() => "scalar".toParser();
   Parser<String> typeKw() => "type".toParser();
   Parser<String> interfaceKw() => "interface".toParser();
@@ -328,18 +352,20 @@ class GQGrammar extends GrammarDefinition {
 
   Parser<GQTypeDefinition> typeDefinition() {
     return seq4(
-        seq2(ref1(token, typeKw()), ref0(identifier)).map2((_, identifier) => identifier),
-        implementsToken().optional(),
-        directiveValueList(),
-        seq3(
-          ref0(openBrace),
-          fieldList(
-            required: true,
-            canBeInitialized: true,
-            acceptsArguments: true,
-          ),
-          ref0(closeBrace),
-        ).map3((p0, fields, p2) => fields)).map4((name, interfaceNames, directives, fields) {
+            seq2(ref1(token, typeKw()), ref0(identifier))
+                .map2((_, identifier) => identifier),
+            implementsToken().optional(),
+            directiveValueList(),
+            seq3(
+              ref0(openBrace),
+              fieldList(
+                required: true,
+                canBeInitialized: true,
+                acceptsArguments: true,
+              ),
+              ref0(closeBrace),
+            ).map3((p0, fields, p2) => fields))
+        .map4((name, interfaceNames, directives, fields) {
       final type = GQTypeDefinition(
         name: name,
         nameDeclared: false,
@@ -355,27 +381,33 @@ class GQGrammar extends GrammarDefinition {
 
   Parser<GQInputDefinition> inputDefinition() {
     return seq4(
-        ref1(token, inputKw()),
-        ref0(identifier),
-        directiveValueList(),
-        seq3(
-                ref0(openBrace),
-                fieldList(
-                  required: true,
-                  canBeInitialized: true,
-                  acceptsArguments: false,
-                ),
-                ref0(closeBrace))
-            .map3((p0, fieldList, p2) => fieldList)).map4((_, name, directives, fields) {
+            ref1(token, inputKw()),
+            ref0(identifier),
+            directiveValueList(),
+            seq3(
+                    ref0(openBrace),
+                    fieldList(
+                      required: true,
+                      canBeInitialized: true,
+                      acceptsArguments: false,
+                    ),
+                    ref0(closeBrace))
+                .map3((p0, fieldList, p2) => fieldList))
+        .map4((_, name, directives, fields) {
       String? nameFromDirective = getNameValueFromDirectives(directives);
       TokenInfo inputName = name.ofNewName(nameFromDirective ?? name.token);
-      final input = GQInputDefinition(name: inputName, declaredName: name.token, fields: fields, directives: directives);
+      final input = GQInputDefinition(
+          name: inputName,
+          declaredName: name.token,
+          fields: fields,
+          directives: directives);
       addInputDefinition(input);
       return input;
     });
   }
 
-  Parser<GQField> field({required bool canBeInitialized, required acceptsArguments}) {
+  Parser<GQField> field(
+      {required bool canBeInitialized, required acceptsArguments}) {
     return ([
       ref0(documentation).optional(),
       identifier(),
@@ -403,7 +435,8 @@ class GQGrammar extends GrammarDefinition {
       }
 
       GQType type = value[acceptsArguments ? 4 : 3] as GQType;
-      List<GQDirectiveValue>? directives = value.last as List<GQDirectiveValue>?;
+      List<GQDirectiveValue>? directives =
+          value.last as List<GQDirectiveValue>?;
       return GQField(
         name: name,
         type: type,
@@ -433,18 +466,20 @@ class GQGrammar extends GrammarDefinition {
 
   Parser<GQInterfaceDefinition> interfaceDefinition() {
     return seq4(
-        seq2(ref1(token, interfaceKw()), ref0(identifier)).map2((p0, interfaceName) => interfaceName),
-        implementsToken().optional(),
-        directiveValueList(),
-        seq3(
-                ref0(openBrace),
-                fieldList(
-                  required: true,
-                  canBeInitialized: false,
-                  acceptsArguments: true,
-                ),
-                ref0(closeBrace))
-            .map3((p0, fieldList, p2) => fieldList)).map4((name, parentNames, directives, fieldList) {
+            seq2(ref1(token, interfaceKw()), ref0(identifier))
+                .map2((p0, interfaceName) => interfaceName),
+            implementsToken().optional(),
+            directiveValueList(),
+            seq3(
+                    ref0(openBrace),
+                    fieldList(
+                      required: true,
+                      canBeInitialized: false,
+                      acceptsArguments: true,
+                    ),
+                    ref0(closeBrace))
+                .map3((p0, fieldList, p2) => fieldList))
+        .map4((name, parentNames, directives, fieldList) {
       var interface = GQInterfaceDefinition(
         name: name,
         nameDeclared: false,
@@ -462,27 +497,37 @@ class GQGrammar extends GrammarDefinition {
           directiveValueList(),
           seq3(
                   ref0(openBrace),
-                  seq3(ref1(token, documentation().optional()), ref1(token, identifier()), directiveValueList())
-                      .map3((comment, value, directives) =>
-                          GQEnumValue(value: value, comment: comment, directives: directives))
+                  seq3(ref1(token, documentation().optional()),
+                          ref1(token, identifier()), directiveValueList())
+                      .map3((comment, value, directives) => GQEnumValue(
+                          value: value,
+                          comment: comment,
+                          directives: directives))
                       .plus(),
                   ref0(closeBrace))
-              .map3((p0, list, p2) => list)).map3((identifier, directives, enumValues) {
-        var enumDef = GQEnumDefinition(token: identifier, values: enumValues, directives: directives);
+              .map3((p0, list, p2) => list)).map3(
+          (identifier, directives, enumValues) {
+        var enumDef = GQEnumDefinition(
+            token: identifier, values: enumValues, directives: directives);
         addEnumDefinition(enumDef);
         return enumDef;
       });
 
-  Parser<List<GQDirectiveValue>> directiveValueList() => directiveValue().star();
+  Parser<List<GQDirectiveValue>> directiveValueList() =>
+      directiveValue().star();
 
-  Parser<GQDirectiveValue> directiveValue() => seq2(directiveValueName(), argumentValues().optional())
-          .map2((name, args) => GQDirectiveValue(name.ofNewName(name.token.trim()), [], args ?? [], generated: false))
+  Parser<GQDirectiveValue> directiveValue() =>
+      seq2(directiveValueName(), argumentValues().optional())
+          .map2((name, args) => GQDirectiveValue(
+              name.ofNewName(name.token.trim()), [], args ?? [],
+              generated: false))
           .map((directiveValue) {
         addDiectiveValue(directiveValue);
         return directiveValue;
       });
 
-  Parser<TokenInfo> directiveValueName() => ref1(token, (ref0(at) & identifier())).map((list) {
+  Parser<TokenInfo> directiveValueName() =>
+      ref1(token, (ref0(at) & identifier())).map((list) {
         var token = list.last as TokenInfo;
         return token.ofNewName("@${token.token}");
       });
@@ -493,8 +538,10 @@ class GQGrammar extends GrammarDefinition {
                 directiveValueName(),
               ).map2((_, name) => name),
               arguments().optional(),
-              seq2(ref1(token, onKw()), ref1(token, directiveScopes())).map2((_, scopes) => scopes))
-          .map3((name, args, scopes) => GQDirectiveDefinition(name, args ?? [], scopes))
+              seq2(ref1(token, onKw()), ref1(token, directiveScopes()))
+                  .map2((_, scopes) => scopes))
+          .map3((name, args, scopes) =>
+              GQDirectiveDefinition(name, args ?? [], scopes))
           .map((definition) {
         addDirectiveDefinition(definition);
         return definition;
@@ -503,38 +550,50 @@ class GQGrammar extends GrammarDefinition {
   Parser<GQDirectiveScope> directiveScope() {
     return GQDirectiveScope.values
         .map((e) => e.name)
-        .map((name) => ref1(token, name.toParser()).map((value) => GQDirectiveScope.values.asNameMap()[value]!))
+        .map((name) => ref1(token, name.toParser())
+            .map((value) => GQDirectiveScope.values.asNameMap()[value]!))
         .toList()
         .toChoiceParser();
   }
 
-  Parser<Set<GQDirectiveScope>> directiveScopes() =>
-      seq2(directiveScope(), seq2(ref1(token, pipeKw()), directiveScope()).map2((_, scope) => scope).star())
-          .map2((scope, scopeList) => {scope, ...scopeList});
+  Parser<Set<GQDirectiveScope>> directiveScopes() => seq2(
+          directiveScope(),
+          seq2(ref1(token, pipeKw()), directiveScope())
+              .map2((_, scope) => scope)
+              .star())
+      .map2((scope, scopeList) => {scope, ...scopeList});
 
-  Parser<GQArgumentDefinition> oneArgumentDefinition({bool parametrized = false}) => seq5(
-          ref0(parametrized ? parametrizedArgument : identifier),
-          colon(),
-          typeTokenDefinition(),
-          initialization().optional(),
-          directiveValueList())
-      .map5((name, _, type, initialization, directives) =>
-          GQArgumentDefinition(name, type, directives, initialValue: initialization));
+  Parser<GQArgumentDefinition> oneArgumentDefinition(
+          {bool parametrized = false}) =>
+      seq5(
+              ref0(parametrized ? parametrizedArgument : identifier),
+              colon(),
+              typeTokenDefinition(),
+              initialization().optional(),
+              directiveValueList())
+          .map5((name, _, type, initialization, directives) =>
+              GQArgumentDefinition(name, type, directives,
+                  initialValue: initialization));
 
-  Parser<TokenInfo> parametrizedArgument() => ref1(token, (char("\$") & identifier())).map((value) {
+  Parser<TokenInfo> parametrizedArgument() =>
+      ref1(token, (char("\$") & identifier())).map((value) {
         // @TODO make this type safe
         var dollarSign = value[0] as String;
         var token = value[1] as TokenInfo;
         return token.ofNewName("$dollarSign${token.token}");
       });
 
-  Parser<String> refValue() => ref1(token, (char("\$") & identifier())).map((value) => value.join());
+  Parser<String> refValue() =>
+      ref1(token, (char("\$") & identifier())).map((value) => value.join());
 
-  Parser<GQArgumentValue> onArgumentValue() => (ref0(identifier) & colon() & initialValue()).map((value) {
+  Parser<GQArgumentValue> onArgumentValue() =>
+      (ref0(identifier) & colon() & initialValue()).map((value) {
         return GQArgumentValue(value.first, value.last);
       });
 
-  Parser<Object> initialization() => (ref1(token, assignKw()) & ref1(token, initialValue())).map((value) => value.last);
+  Parser<Object> initialization() =>
+      (ref1(token, assignKw()) & ref1(token, initialValue()))
+          .map((value) => value.last);
 
   Parser<Object> initialValue() => ref1(
           token,
@@ -549,20 +608,27 @@ class GQGrammar extends GrammarDefinition {
           ].toChoiceParser())
       .map((value) => value);
 
-  Parser<Map<String, Object?>> objectValue() =>
-      seq3(openBrace(), ref1(token, oneObjectField()).cast<MapEntry<String, Object>>().star(), closeBrace())
-          .map3((_, entries, __) => Map.fromEntries(entries));
+  Parser<Map<String, Object?>> objectValue() => seq3(
+          openBrace(),
+          ref1(token, oneObjectField()).cast<MapEntry<String, Object>>().star(),
+          closeBrace())
+      .map3((_, entries, __) => Map.fromEntries(entries));
 
   Parser<MapEntry<String, Object>> oneObjectField() =>
-      seq3(identifier(), colon(), initialValue()).map3((id, _, value) => MapEntry(id.token, value));
+      seq3(identifier(), colon(), initialValue())
+          .map3((id, _, value) => MapEntry(id.token, value));
 
   Parser<List<Object?>> arrayValue() =>
-      seq3(openSquareBracket(), ref0(initialValue).star(), closeSquareBracket()).map3((_, values, __) => values);
+      seq3(openSquareBracket(), ref0(initialValue).star(), closeSquareBracket())
+          .map3((_, values, __) => values);
 
-  Parser<GQType> typeTokenDefinition() => (ref0(simpleTypeTokenDefinition) | ref0(listTypeDefinition)).cast<GQType>();
+  Parser<GQType> typeTokenDefinition() =>
+      (ref0(simpleTypeTokenDefinition) | ref0(listTypeDefinition))
+          .cast<GQType>();
 
   Parser<GQType> simpleTypeTokenDefinition() {
-    return seq2(ref1(token, identifier()), ref1(token, char("!")).optional().map((value) => value == null))
+    return seq2(ref1(token, identifier()),
+            ref1(token, char("!")).optional().map((value) => value == null))
         .map2((name, nullable) {
       return GQType(name, nullable, isScalar: false);
     });
@@ -579,16 +645,57 @@ class GQGrammar extends GrammarDefinition {
         .map2((type, nullable) => GQListType(type, nullable));
   }
 
-  Parser<TokenInfo> identifier() => ref1(token, _id()).token().map((t) => TokenInfo.of(t, lastParsedFile));
+  List<int> _offsetToLineColumn(String text, int offset) {
+    offset = offset.clamp(0, text.length);
+    var line = 1;
+    var column = 1;
+    for (var i = 0; i < offset; i++) {
+      if (text.codeUnitAt(i) == 10) {
+        // '\n'
+        line++;
+        column = 1;
+      } else {
+        column++;
+      }
+    }
+    return [line, column];
+  }
 
-  Parser<String> _id() => seq2(_myLetter(), [_myLetter(), number()].toChoiceParser().star()).flatten();
+  Parser<TokenInfo> identifier() =>
+      ref1(token, _id())
+      
+      .seq(position())
+      .map((values) {
+        final id = values[0] as String;
+        final offset = values[1] as int;
+        final pos = _positionTracker?.lineColumnAt(offset - id.length);
+        if (pos == null) {
+          return TokenInfo(token: id, line: -1, column: -1);
+        }
+        return TokenInfo(
+          token: id,
+          line: pos[0],
+          column: pos[1],
+        );
+      });
+  // .map((id) => TokenInfo(token: id, line: -1, column: -1));
+
+  // .token().map((t) {
+  //   return TokenInfo.of(t, lastParsedFile);
+  // });
+
+  Parser<String> _id() =>
+      seq2(_myLetter(), [_myLetter(), number()].toChoiceParser().star())
+          .flatten();
 
   Parser<int> number() => ref0(digit).plus().flatten().map(int.parse);
 
   Parser<String> _myLetter() => [ref0(letter), char("_")].toChoiceParser();
 
-  Parser hiddenStuffWhitespace() => (ref0(visibleWhitespace) | ref0(singleLineComment) | ref0(commas));
-  Parser ignoredStuff() => (ref0(visibleWhitespace) | ref0(singleLineComment) | ref0(documentation));
+  Parser hiddenStuffWhitespace() =>
+      (ref0(visibleWhitespace) | ref0(singleLineComment) | ref0(commas));
+  Parser ignoredStuff() =>
+      (ref0(visibleWhitespace) | ref0(singleLineComment) | ref0(documentation));
 
   Parser<String> visibleWhitespace() => whitespace();
 
@@ -599,12 +706,16 @@ class GQGrammar extends GrammarDefinition {
   Parser<String> tripleQuote() => string('"""');
 
   Parser<GQComment> singleLineComment() =>
-      (char('#') & ref0(newlineLexicalToken).neg().star()).flatten().map((value) => GQComment(value));
+      (char('#') & ref0(newlineLexicalToken).neg().star())
+          .flatten()
+          .map((value) => GQComment(value));
 
-  Parser<String> singleLineStringLexicalToken() =>
-      seq3(doubleQuote(), ref0(stringContentDoubleQuotedLexicalToken), doubleQuote()).flatten();
+  Parser<String> singleLineStringLexicalToken() => seq3(doubleQuote(),
+          ref0(stringContentDoubleQuotedLexicalToken), doubleQuote())
+      .flatten();
 
-  Parser<String> stringContentDoubleQuotedLexicalToken() => doubleQuote().neg().star().flatten();
+  Parser<String> stringContentDoubleQuotedLexicalToken() =>
+      doubleQuote().neg().star().flatten();
 
   Parser<String> singleLineStringToken() {
     final quote = char('"');
@@ -635,45 +746,58 @@ class GQGrammar extends GrammarDefinition {
 
     final content = contentChar.star().flatten();
 
-    return (tripleQuote & content & tripleQuote).map((values) => values[1] as String);
+    return (tripleQuote & content & tripleQuote)
+        .map((values) => values[1] as String);
   }
   //  ('"""'.toParser() & pattern('"""').neg().star() & '"""'.toParser()).flatten();
 
-  Parser<String> stringToken() => (blockStringToken() | singleLineStringToken()).flatten();
+  Parser<String> stringToken() =>
+      (blockStringToken() | singleLineStringToken()).flatten();
 
-  Parser<String> documentation() => (blockStringToken() | singleLineStringToken()).flatten();
+  Parser<String> documentation() =>
+      (blockStringToken() | singleLineStringToken()).flatten();
 
   Parser<String> newlineLexicalToken() => pattern('\n\r');
 
   Parser<Set<TokenInfo>> implementsToken() {
-    return seq2(ref1(token, implementsKw()), interfaceList()).map2((_, set) => set);
+    return seq2(ref1(token, implementsKw()), interfaceList())
+        .map2((_, set) => set);
   }
 
   Parser<String> andKw() => "&".toParser();
 
-  Parser<Set<TokenInfo>> interfaceList() =>
-      (identifier() & (ref1(token, andKw()) & identifier()).map((value) => value[1]).star()).map((array) {
+  Parser<Set<TokenInfo>> interfaceList() => (identifier() &
+              (ref1(token, andKw()) & identifier())
+                  .map((value) => value[1])
+                  .star())
+          .map((array) {
         Set<TokenInfo> interfaceList = {array[0]};
         for (var value in array[1]) {
           //if(interfaceList.where((e) => e.token == ))
-          final exists = interfaceList.where((e) => e.token == value.token).isNotEmpty;
+          final exists =
+              interfaceList.where((e) => e.token == value.token).isNotEmpty;
           if (exists) {
-            throw ParseException("interface $value has been implemented more than once", info: value);
+            throw ParseException(
+                "interface $value has been implemented more than once",
+                info: value);
           }
           interfaceList.add(value);
         }
         return interfaceList;
       });
 
-  Parser<bool> boolean() => ("true".toParser() | "false".toParser()).map((value) => value == "true");
+  Parser<bool> boolean() =>
+      ("true".toParser() | "false".toParser()).map((value) => value == "true");
 
   Parser<int> intParser() =>
-      ("0x".toParser() & (pattern("0-9A-Fa-f").times(4)) | (char("-").optional() & pattern("0-9").plus()))
+      ("0x".toParser() & (pattern("0-9A-Fa-f").times(4)) |
+              (char("-").optional() & pattern("0-9").plus()))
           .flatten()
           .map(int.parse);
 
   Parser<Object> doubleParser() =>
-      ((plainIntParser() & (char(".") & plainIntParser()).optional()) | intParser().map((value) => "$value"))
+      ((plainIntParser() & (char(".") & plainIntParser()).optional()) |
+              intParser().map((value) => "$value"))
           .flatten()
           .map((val) {
         if (val.contains(".")) {
@@ -683,18 +807,23 @@ class GQGrammar extends GrammarDefinition {
         }
       });
 
-  Parser<Object> constantType() => [doubleParser(), stringToken(), boolean()].toChoiceParser();
+  Parser<Object> constantType() =>
+      [doubleParser(), stringToken(), boolean()].toChoiceParser();
 
-  Parser<GQScalarDefinition> scalarDefinition() =>
-      (ref1(token, scalarKw()) & ref1(token, identifier()) & directiveValueList()).map((array) {
+  Parser<GQScalarDefinition> scalarDefinition() => (ref1(token, scalarKw()) &
+              ref1(token, identifier()) &
+              directiveValueList())
+          .map((array) {
         final scalarName = array[1];
-        var scalar = GQScalarDefinition(token: scalarName, directives: array[2]);
+        var scalar =
+            GQScalarDefinition(token: scalarName, directives: array[2]);
         addScalarDefinition(scalar);
         return scalar;
       });
 
   Parser<GQSchema> schemaDefinition() {
-    return seq4(ref1(token, schemaKw()), openBrace(), schemaElement().repeat(0, 3), closeBrace())
+    return seq4(ref1(token, schemaKw()), openBrace(),
+            schemaElement().repeat(0, 3), closeBrace())
         .map4((tokenInfo, p1, list, p3) {
       var schema = GQSchema.fromList(tokenInfo, list);
       defineSchema(schema);
@@ -703,14 +832,23 @@ class GQGrammar extends GrammarDefinition {
   }
 
   Parser<String> schemaElement() {
-    return seq3(ref1(token, [queryKw(), mutationKw(), subscriptionKw()].toChoiceParser()), colon(), identifier())
+    return seq3(
+            ref1(token,
+                [queryKw(), mutationKw(), subscriptionKw()].toChoiceParser()),
+            colon(),
+            identifier())
         .map3((p0, p1, p2) => "$p0-$p2");
   }
 
   Parser<GQProjection> fragmentReference() {
-    return seq3(ref1(token, fragRefKw()), identifier(), directiveValueList()).map3(
-      (_, name, directives) =>
-          GQProjection(fragmentName: name.token, token: name, alias: null, block: null, directives: directives),
+    return seq3(ref1(token, fragRefKw()), identifier(), directiveValueList())
+        .map3(
+      (_, name, directives) => GQProjection(
+          fragmentName: name.token,
+          token: name,
+          alias: null,
+          block: null,
+          directives: directives),
     );
   }
 
@@ -719,7 +857,8 @@ class GQGrammar extends GrammarDefinition {
   }
 
   Parser<GQProjection> projectionFieldField() {
-    return seq4(alias().optional(), identifier(), directiveValueList(), ref0(fragmentBlock).optional())
+    return seq4(alias().optional(), identifier(), directiveValueList(),
+            ref0(fragmentBlock).optional())
         .map4((alias, token, directives, block) => GQProjection(
               token: token,
               fragmentName: null,
@@ -755,7 +894,9 @@ class GQGrammar extends GrammarDefinition {
   }
 
   Parser<GQProjection> fragmentValue() => [
-        inlineFragment().plus().map((list) => GQInlineFragmentsProjection(inlineFragments: list)),
+        inlineFragment()
+            .plus()
+            .map((list) => GQInlineFragmentsProjection(inlineFragments: list)),
         fragmentReference()
       ].toChoiceParser().cast<GQProjection>();
 
@@ -769,7 +910,8 @@ class GQGrammar extends GrammarDefinition {
             identifier(),
             directiveValueList(),
             fragmentBlock())
-        .map4((name, typeName, directiveValues, block) => GQFragmentDefinition(name, typeName, block, directiveValues))
+        .map4((name, typeName, directiveValues, block) =>
+            GQFragmentDefinition(name, typeName, block, directiveValues))
         .map((f) {
       addFragmentDefinition(f);
       return f;
@@ -784,8 +926,11 @@ class GQGrammar extends GrammarDefinition {
               ref1(token, assignKw()),
             ).map3((_, unionName, eq) => unionName),
             ref0(identifier),
-            seq2(ref1(token, pipeKw()), ref0(identifier)).map2((_, id) => id).star())
-        .map3((name, type1, types) => GQUnionDefinition(name, [type1, ...types]))
+            seq2(ref1(token, pipeKw()), ref0(identifier))
+                .map2((_, id) => id)
+                .star())
+        .map3(
+            (name, type1, types) => GQUnionDefinition(name, [type1, ...types]))
         .map((value) {
       addUnionDefinition(value);
       return value;
@@ -799,11 +944,12 @@ class GQGrammar extends GrammarDefinition {
   ///
 
   Parser<GQFragmentBlockDefinition> fragmentBlock() {
-    return seq3(openBrace(), fragmentField().plus(), closeBrace())
-        .map3((p0, projectionList, p2) => GQFragmentBlockDefinition(projectionList));
+    return seq3(openBrace(), fragmentField().plus(), closeBrace()).map3(
+        (p0, projectionList, p2) => GQFragmentBlockDefinition(projectionList));
   }
 
-  Parser<int> plainIntParser() => pattern("0-9").plus().flatten().map(int.parse);
+  Parser<int> plainIntParser() =>
+      pattern("0-9").plus().flatten().map(int.parse);
 
   Parser<GQQueryDefinition> queryDefinition(GQQueryType type) {
     return seq4(
@@ -815,7 +961,9 @@ class GQGrammar extends GrammarDefinition {
             directiveValueList(),
             seq3(
                     openBrace(),
-                    (type == GQQueryType.subscription ? queryElement().map((value) => [value]) : queryElement().plus()),
+                    (type == GQQueryType.subscription
+                        ? queryElement().map((value) => [value])
+                        : queryElement().plus()),
                     closeBrace())
                 .map3((p0, queryElements, p2) => queryElements))
         .map4(
@@ -834,8 +982,8 @@ class GQGrammar extends GrammarDefinition {
   }
 
   Parser<GQQueryElement> queryElement() {
-    return seq5(alias().optional(), identifier(), argumentValues().optional(), directiveValueList(),
-            fragmentBlock().optional())
+    return seq5(alias().optional(), identifier(), argumentValues().optional(),
+            directiveValueList(), fragmentBlock().optional())
         .map5((alias, name, args, directiveList, block) => GQQueryElement(
               name,
               directiveList,
@@ -845,5 +993,6 @@ class GQGrammar extends GrammarDefinition {
             ));
   }
 
-  Parser<TokenInfo> alias() => seq2(identifier(), colon()).map2((id, colon) => id);
+  Parser<TokenInfo> alias() =>
+      seq2(identifier(), colon()).map2((id, colon) => id);
 }
