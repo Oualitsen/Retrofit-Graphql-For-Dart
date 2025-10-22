@@ -18,6 +18,7 @@ import 'package:retrofit_graphql/src/model/gq_type_definition.dart';
 import 'package:retrofit_graphql/src/model/gq_queries.dart';
 import 'package:retrofit_graphql/src/model/token_info.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
+import 'package:retrofit_graphql/src/ui/flutter/gq_input_view.dart';
 import 'package:retrofit_graphql/src/ui/flutter/gq_type_view.dart';
 import 'package:retrofit_graphql/src/utils.dart';
 import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
@@ -957,26 +958,17 @@ extension GQGrammarExtension on GQGrammar {
     return decorators;
   }
 
+  void generateInputViews(){
+
+  }
+
   void generateViews() {
-    var s = [schema.mutation, schema.query, schema.subscription];
-    projectedTypes.values
-        .where((t) => t is! GQInterfaceDefinition && !s.contains(t.token) && t.getDirectiveByName(gqInternal) == null)
-        .map((t) => GQTypeView(type: t))
-        .forEach((view) {
-      views[view.token] = view;
+    inputs.values
+        .where((t) => t.getDirectiveByName(gqInternal) == null)
+        .map((t) => GQInputView(input: t))
+        .forEach((inputView) {
+      inputViews[inputView.token] = inputView;
     });
-    if (views.isNotEmpty) {
-      // add GQFieldViewType enumeration
-      addEnumDefinition(GQEnumDefinition(
-          token: "GQFieldViewType".toToken(),
-          values: ['listTile', 'reversedListTile', 'labelValueRow']
-              .map((e) => e.toToken())
-              .map(
-                (e) => GQEnumValue(value: e, comment: null, directives: []),
-              )
-              .toList(),
-          directives: []));
-    }
   }
 }
 
