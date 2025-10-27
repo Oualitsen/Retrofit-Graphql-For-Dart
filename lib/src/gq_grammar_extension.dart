@@ -19,7 +19,6 @@ import 'package:retrofit_graphql/src/model/gq_queries.dart';
 import 'package:retrofit_graphql/src/model/token_info.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
 import 'package:retrofit_graphql/src/ui/flutter/gq_input_view.dart';
-import 'package:retrofit_graphql/src/ui/flutter/gq_type_view.dart';
 import 'package:retrofit_graphql/src/utils.dart';
 import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 

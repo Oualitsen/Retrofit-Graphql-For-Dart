@@ -11,6 +11,7 @@ import 'package:retrofit_graphql/src/io_utils.dart';
 import 'package:retrofit_graphql/src/model/gq_interface_definition.dart';
 import 'package:retrofit_graphql/src/serializers/dart_client_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/dart_serializer.dart';
+import 'package:retrofit_graphql/src/serializers/flutter_input_widget_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/flutter_type_widget_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/graphq_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/java_serializer.dart';
@@ -259,7 +260,8 @@ Future<Set<String>> generateClientClasses(GQGrammar grammar, GeneratorConfig con
   final destinationDir = config.outputDir;
   final packageName = config.clientConfig?.packageName;
   final prefix = "package:${packageName}/${(pack ?? config.outputDir).replaceFirst("lib/", "")}";
-  final viewSerializeer = FlutterTypeWidgetSerializer(grammar, serializer, true);
+  final viewSerializer = FlutterTypeWidgetSerializer(grammar, serializer, true);
+  final inputSerializer = FlutterInputWidgetSerializer(grammar, serializer, true);
   grammar.enums.forEach((k, def) {
     var text = serializer.serializeEnumDefinition(def, "");
     var r = writeToFile(
@@ -302,7 +304,24 @@ Future<Set<String>> generateClientClasses(GQGrammar grammar, GeneratorConfig con
       if (appLocImport != null) {
         def.addImport(appLocImport);
       }
-      var text = viewSerializeer.serializeType(def, prefix);
+      var text = viewSerializer.serializeType(def, prefix);
+      var r = writeToFile(
+          data: text,
+          fileName: serializer.getFileNameFor(def),
+          subdir: "widgets",
+          imports: [],
+          destinationDir: destinationDir);
+      futures.add(r);
+    });
+  }
+  if (config.clientConfig?.generateUiInputs ?? false) {
+    grammar.inputViews.forEach((k, def) {
+      var appLocImport = config.clientConfig?.appLocalizationsImport;
+      // @TODO add an assertion here
+      if (appLocImport != null) {
+        def.addImport(appLocImport);
+      }
+      var text = inputSerializer.generateInputWidget(def, prefix);
       var r = writeToFile(
           data: text,
           fileName: serializer.getFileNameFor(def),

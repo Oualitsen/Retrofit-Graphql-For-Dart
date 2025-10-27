@@ -150,15 +150,18 @@ class DartCodeGenUtils implements CodeGenUtilsBase {
     if (statements != null) {
       buffer.write(" ");
       buffer.write(block(statements));
+    }else {
+      buffer.write(";");
     }
     return buffer.toString();
   }
 
   String createClass({required String className, required List<String> statements, List<String>? baseClassNames}) {
     var buffer = StringBuffer();
-    buffer.write("class ${className}");
+    buffer.write("class ${className} ");
     if(baseClassNames != null && baseClassNames.isNotEmpty) {
-      buffer.write(" ");
+      
+      buffer.write(" extends ");
       buffer.write(baseClassNames.join(", "));
     }
     buffer.write(block(statements));

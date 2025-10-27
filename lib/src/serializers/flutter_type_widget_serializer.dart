@@ -59,19 +59,18 @@ class FlutterTypeWidgetSerializer {
         .map(generateEnumValueFor)
         .forEach(buffer.writeln);
 
-    buffer.write('class ${widgetName} extends StatelessWidget ');
-    // field orders
-
-    buffer.writeln(codeGenUtils.block([
-      ...getDeclarations(type),
-      serializeConstructor(widgetName, fields),
-      serializeBuildMethod(fields),
-      serializeGetLabel(type),
-      serializeGetInBetweenWidget(),
-      _serializeCreateLabelWidget(),
-      _serializeWrapWiget(),
-    ]));
-
+    buffer.writeln(codeGenUtils.createClass(
+        baseClassNames: ['StatelessWidget'],
+        className: widgetName,
+        statements: [
+          ...getDeclarations(type),
+          serializeConstructor(widgetName, fields),
+          serializeBuildMethod(fields),
+          serializeGetLabel(type),
+          serializeGetInBetweenWidget(),
+          _serializeCreateLabelWidget(),
+          _serializeWrapWiget(),
+        ]));
     return buffer.toString();
   }
 
@@ -109,39 +108,37 @@ Widget _wrapWidget(Widget label, Widget value) {
   }
 
   String serializeConstructor(String widgetName, List<GQField> fields) {
-    var m = codeGenUtils.createMethod(
-        methodName: widgetName,
-        returnType: 'const',
-        arguments: [
-          'super.key,',
-          'required this.value,',
-          // orders
-          for (var i = 0, field = fields[i]; i < fields.length; i++)
-            'this.${orderVar(field)} = ${i},',
-          // visibility
-          for (var i = 0, field = fields[i]; i < fields.length; i++)
-            'this.${visibleVar(field)} = true,',
-          // field labels
-          for (var field in fields) 'this.${labelVar(field)},',
-          // replacement widgets
-          for (var field in fields) 'this.${widgetVar(field)},',
-          // transformers
-          ...fields
-              .where((f) => grammar.isNonProjectableType(f.type.token))
-              .map((field) => 'this.${transVar(field)},'),
-          // viewType
-          'this.viewType = GQFieldViewType.labelValueRow,',
-          'this.labelFlex = 1,',
-          'this.valueFlex = 1,',
-          'this.spaceBetween = 10.0,',
-          // styles
-          'this.labelStyle,',
-          'this.valueStyle,',
-          'this.verticalLayout = true,',
-          ...fields
-              .where((f) => f.type.isList)
-              .map((e) => 'this.${containerVar(e)},')
-        ]);
+    var m = codeGenUtils
+        .createMethod(methodName: widgetName, returnType: 'const', arguments: [
+      'super.key,',
+      'required this.value,',
+      // orders
+      for (var i = 0, field = fields[i]; i < fields.length; i++)
+        'this.${orderVar(field)} = ${i},',
+      // visibility
+      for (var i = 0, field = fields[i]; i < fields.length; i++)
+        'this.${visibleVar(field)} = true,',
+      // field labels
+      for (var field in fields) 'this.${labelVar(field)},',
+      // replacement widgets
+      for (var field in fields) 'this.${widgetVar(field)},',
+      // transformers
+      ...fields
+          .where((f) => grammar.isNonProjectableType(f.type.token))
+          .map((field) => 'this.${transVar(field)},'),
+      // viewType
+      'this.viewType = GQFieldViewType.labelValueRow,',
+      'this.labelFlex = 1,',
+      'this.valueFlex = 1,',
+      'this.spaceBetween = 10.0,',
+      // styles
+      'this.labelStyle,',
+      'this.valueStyle,',
+      'this.verticalLayout = true,',
+      ...fields
+          .where((f) => f.type.isList)
+          .map((e) => 'this.${containerVar(e)},')
+    ]);
     return "${m};";
   }
 
@@ -198,7 +195,7 @@ Widget _wrapWidget(Widget label, Widget value) {
     } else {
       valueName = field.name.token;
     }
-    String dot = targetField.type.nullable ?  "!.": ".";
+    String dot = targetField.type.nullable ? "!." : ".";
 
     if (field.type.isList) {
       // handle list of values
@@ -214,7 +211,10 @@ Widget _wrapWidget(Widget label, Widget value) {
           positiveStatement:
               "${containerVar(field)}!(${valueName}${dot}${mapToList}",
           negativeStatement: "Column(children: ${valueName}${dot}${mapToList}");
-          var nullValueCheck = codeGenUtils.ternaryOp(condition: '${valueName} != null', positiveStatement: "(${ternaryOp})", negativeStatement: 'SizedBox.shrink()');
+      var nullValueCheck = codeGenUtils.ternaryOp(
+          condition: '${valueName} != null',
+          positiveStatement: "(${ternaryOp})",
+          negativeStatement: 'SizedBox.shrink()');
       buffer.write(nullValueCheck);
 
       return buffer.toString();
@@ -234,7 +234,6 @@ Widget _wrapWidget(Widget label, Widget value) {
       if (grammar.isEnum(type)) {
         buffer.write('_getGenderValue(context, ${valueName})');
       } else {
-        
         switch (serialType) {
           case 'String':
           case 'String?':

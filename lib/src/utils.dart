@@ -147,3 +147,4 @@ bool shouldSkip(GQDirectivesMixin mixin, CodeGenerationMode mode) {
 
 
 String widgetName(String typeName) => "${typeName}Widget";
+String widgetStateName(String typeName) => "${typeName}WidgetState";
