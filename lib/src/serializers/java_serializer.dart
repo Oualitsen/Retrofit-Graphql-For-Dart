@@ -113,6 +113,7 @@ class JavaSerializer extends GqSerializer {
     if (!generateJsonMethods) {
       return "";
     }
+    def.addImport(JavaImports.optional);
     return codeGenUtils.createMethod(
       returnType: "public static ${def.token}",
       methodName: "fromJson",
@@ -575,7 +576,8 @@ class JavaSerializer extends GqSerializer {
   @override
   String doSerializeTypeDefinition(GQTypeDefinition def) {
     if (def is GQInterfaceDefinition) {
-      return serializeInterface(def);
+      return serializeInterface(def,
+          getters: def.getDirectiveByName(gqInterfaceFieldAsProperties) == null);
     } else {
       return _doSerializeTypeDefinition(def);
     }
@@ -678,7 +680,7 @@ class JavaSerializer extends GqSerializer {
     return buffer.toString();
   }
 
-  String serializeInterface(GQInterfaceDefinition interface, {bool getters = true}) {
+  String serializeInterface(GQInterfaceDefinition interface, {required bool getters}) {
     final token = interface.tokenInfo;
     final interfaces = interface.interfaces;
     final fields = interface.getSerializableFields(grammar.mode);
@@ -693,8 +695,9 @@ class JavaSerializer extends GqSerializer {
         interfaceNames: interfaces.map((e) => e.tokenInfo.token).toList(),
         statements: [
           ...fields.map((f) => _serializeInterfaceField(f, getters)),
-          "",
-          if (generateJsonMethods) ...[
+          if (generateJsonMethods &&
+              interface.getDirectiveByName(gqInterfaceFieldAsProperties) == null) ...[
+            "",
             "Map<String, Object> toJson();",
             _serializeFromJsonForInterface(interface.token, interface.implementations)
           ]
@@ -735,9 +738,11 @@ class JavaSerializer extends GqSerializer {
 
     if (grammar.enums.containsKey(token.token)) {
       path = "enums.${token.token}";
-    } else if (grammar.interfaces.containsKey(token.token)) {
+    } else if (grammar.interfaces.containsKey(token.token) ||
+        grammar.projectedInterfaces.containsKey(token.token)) {
       path = "interfaces.${token.token}";
-    } else if (grammar.types.containsKey(token.token)) {
+    } else if (grammar.types.containsKey(token.token) ||
+        grammar.projectedTypes.containsKey(token.token)) {
       path = "types.${token.token}";
     } else if (grammar.inputs.containsKey(token.token)) {
       path = "inputs.${token.token}";

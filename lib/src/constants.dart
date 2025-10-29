@@ -23,10 +23,62 @@ const clientTypes = {
   'GQSubscriptionErrorMessage',
   'GQSubscriptionMessage'
 };
-const clientInterfaces = {'GQSubscriptionErrorMessageBase'};
-const clientObjects = '''
-scalar gqlMapStrObj ${gqExternal}(gqClass: "Map<String, dynamic>")
-scalar dartDynamic ${gqExternal}(gqClass: "dynamic")
+const clientInterfaces = {'GQSubscriptionErrorMessageBase', 'GQWebSocketAdapter'};
+
+const javaClientAdapterNoParamSync = '''
+interface GQClientAdapter 
+${gqDecorators}(${gqDecoratorsArgumentName}: ["@FunctionalInterface"], applyOnClient: true, applyOnServer: false)
+${gqInterfaceFieldAsProperties} ${gqInternal} {
+    execute(payload: String!): String!
+}
+''';
+
+const javaClientAdapterWithParamSync = '''
+interface GQClientAdapter 
+${gqDecorators}(${gqDecoratorsArgumentName}: ["@FunctionalInterface"], applyOnClient: true, applyOnServer: false)
+${gqInterfaceFieldAsProperties} ${gqInternal} {
+    execute(payload: String!, operationName: String!): String!
+}
+''';
+
+const javaJsonEncoderDecorder = '''
+  scalar gqlJavaMap ${gqExternal}(gqClass: "Map<String, Object>", ${gqImport}: "${JavaImports.map}")
+  scalar gqlJavaObject ${gqExternal}(gqClass: "Object")
+
+  interface GQJsonEncoder
+  ${gqDecorators}(${gqDecoratorsArgumentName}: ["@FunctionalInterface"], applyOnClient: true, applyOnServer: false)
+   ${gqInterfaceFieldAsProperties} ${gqInternal} {
+    encode(json: gqlJavaObject!): String!
+  }
+
+  interface GQJsonDecoder 
+  ${gqDecorators}(${gqDecoratorsArgumentName}: ["@FunctionalInterface"], applyOnClient: true, applyOnServer: false)
+   ${gqInterfaceFieldAsProperties} ${gqInternal} {
+     decode(json: String!): gqlJavaMap!
+  }
+
+''';
+
+const javaWebSocketAdapter = '''
+scalar void ${gqExternal}(gqClass: "void")
+
+interface GQWebSocketAdapter ${gqInterfaceFieldAsProperties} ${gqInternal} {
+   onConnectionReady(): void
+   onMessage(message: String!): void
+   sendMessage(message: String!): void
+   close(): void
+}
+''';
+
+String getClientObjects([String lang = 'Dart']) {
+  String dynamicValue = "dynamic";
+  if (lang == "Java") {
+    dynamicValue = "Object";
+  }
+  return '''
+scalar gqlMapStrObj ${gqExternal}(gqClass: "Map<String, ${dynamicValue}>")
+scalar dynamicValue ${gqExternal}(gqClass: "${dynamicValue}")
+
 
 type GQPayload ${gqInternal} {
   query: String!
@@ -36,7 +88,7 @@ type GQPayload ${gqInternal} {
 
 type GQError ${gqInternal} {
   message: String!
-  path: [dartDynamic!]
+  path: [dynamicValue!]
   extensions: gqlMapStrObj
   locations: [GQErrorLocation!]
 }
@@ -73,9 +125,8 @@ type GQSubscriptionMessage implements GQSubscriptionErrorMessageBase ${gqInterna
 
 enum GQAckStatus {none progress acknoledged }
 
-
-
 ''';
+}
 
 class JavaImports {
   static const map = "java.util.Map";
@@ -86,6 +137,9 @@ class JavaImports {
   static const stream = "java.util.stream.Stream";
   static const collectors = "java.util.stream.Collectors";
   static const objects = "java.util.Objects";
+  static const list = "java.util.List";
+  static const arrayList = "java.util.ArrayList";
+  static const arrays = "java.util.Arrays";
 }
 
 class SpringImports {

@@ -1,64 +1,76 @@
 import 'package:retrofit_graphql/src/code_gen_utils.dart';
+import 'package:retrofit_graphql/src/constants.dart';
 import 'package:retrofit_graphql/src/extensions.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:retrofit_graphql/src/model/gq_queries.dart';
+import 'package:retrofit_graphql/src/model/gq_token.dart';
 import 'package:retrofit_graphql/src/model/gq_type.dart';
 import 'package:retrofit_graphql/src/serializers/gq_client_serilaizer.dart';
 import 'package:retrofit_graphql/src/serializers/gq_serializer.dart';
+import 'package:retrofit_graphql/src/serializers/graphq_serializer.dart';
 
-const _operationNameParam = "operationName";
-
-class DartClientSerializer extends ClientSerilaizer {
+class JavaClientSerializer extends ClientSerilaizer {
   final GQGrammar _grammar;
-  final codeGenUtils = DartCodeGenUtils();
+  final codeGenUtils = JavaCodeGenUtils();
+  static const clientName = 'GQClient';
+  final GraphqSerializer gqlSerializer;
 
-  DartClientSerializer(this._grammar, GqSerializer dartSerializer)
-      : super(dartSerializer);
+  JavaClientSerializer(this._grammar, GqSerializer serializer)
+      : gqlSerializer = GraphqSerializer(_grammar, false),
+        super(serializer);
 
   @override
   String generateClient(String importPrefix) {
     var imports = serializeImports(_grammar, importPrefix);
 
     var buffer = StringBuffer();
-    buffer.writeln("import 'dart:convert';");
-    buffer.writeln("import 'dart:async';");
-    buffer.writeln("import 'dart:math';");
+    for (var i in [
+      JavaImports.map,
+      JavaImports.hashMap,
+      JavaImports.list,
+      JavaImports.collectors,
+      JavaImports.arrays,
+    ]) {
+      buffer.writeln('import ${i};');
+    }
     buffer.writeln(imports);
 
-    GQQueryType.values
-        .map((e) => generateQueriesClassByType(e))
-        .where((e) => e != null)
-        .map((e) => e!)
-        .forEach((line) {
-      buffer.writeln(line);
-    });
-
-    buffer.writeln(codeGenUtils.createClass(className: 'GQClient', statements: [
-      'final _fragmMap = <String, String>{};',
-      if (_grammar.hasQueries)
-        'late final ${classNameFromType(GQQueryType.query)} queries;',
+    buffer.writeln(codeGenUtils.createClass(className: clientName, statements: [
+      'final Map<String, String> _fragmMap = new HashMap<>();',
+      'final GQClientAdapter adapter;',
+      'final GQJsonEncoder encoder;',
+      'final GQJsonDecoder decoder;',
+      if (_grammar.hasQueries) 'public final ${classNameFromType(GQQueryType.query)} queries;',
       if (_grammar.hasMutations)
-        'late final ${classNameFromType(GQQueryType.mutation)} mutations;',
+        'public final ${classNameFromType(GQQueryType.mutation)} mutations;',
       if (_grammar.hasSubscriptions)
-        'late final ${classNameFromType(GQQueryType.subscription)} subscriptions;',
+        'public final ${classNameFromType(GQQueryType.subscription)} subscriptions;',
       codeGenUtils.createMethod(
-        methodName: 'GQClient',
+        returnType: "public",
+        methodName: clientName,
         arguments: [
           _adapterDeclaration(),
-          if (_grammar.hasSubscriptions) 'WebSocketAdapter wsAdapter'
+          if (_grammar.hasSubscriptions) 'GQWebSocketAdapter wsAdapter'
         ],
-        namedArguments: false,
         statements: [
-          ..._grammar.fragments.values.map((value) =>
-              "_fragmMap['${value.tokenInfo}'] = '${_grammar.serializer.serializeFragmentDefinitionBase(value)}';"),
+          'this.adapter = adapter;',
+          'this.encoder = encoder;',
+          'this.decoder = decoder;',
           if (_grammar.hasQueries)
-            "queries = ${classNameFromType(GQQueryType.query)}(adapter, _fragmMap);",
+            "queries = new ${classNameFromType(GQQueryType.query)}(adapter, _fragmMap, encoder, decoder);",
           if (_grammar.hasMutations)
-            "mutations = ${classNameFromType(GQQueryType.mutation)}(adapter, _fragmMap);",
+            "mutations = new ${classNameFromType(GQQueryType.mutation)}(adapter, _fragmMap, encoder, decoder);",
           if (_grammar.hasSubscriptions)
-            "subscriptions = ${classNameFromType(GQQueryType.subscription)}(wsAdapter, _fragmMap);",
+            "subscriptions = new ${classNameFromType(GQQueryType.subscription)}(wsAdapter, _fragmMap, encoder, decoder);",
+          ..._grammar.fragments.values.map((value) =>
+              '_fragmMap.put("${value.tokenInfo}", "${gqlSerializer.serializeFragmentDefinitionBase(value)}");'),
         ],
       ),
+      '',
+      ...GQQueryType.values
+          .map((e) => generateQueriesClassByType(e))
+          .where((e) => e != null)
+          .map((e) => e!)
     ]));
 
     buffer.writeln(serializeSubscriptions().ident());
@@ -66,32 +78,33 @@ class DartClientSerializer extends ClientSerilaizer {
   }
 
   String _adapterDeclaration() {
-    if (_grammar.operationNameAsParameter) {
-      return 'Future<String> Function(String payload, String $_operationNameParam) adapter';
-    }
-    return 'Future<String> Function(String payload) adapter';
+    return 'GQClientAdapter adapter, GQJsonEncoder encoder, GQJsonDecoder decoder';
   }
 
   String? generateQueriesClassByType(GQQueryType type) {
     var queries = _grammar.queries.values;
-    var queryList = queries
-        .where((element) => element.type == type && _grammar.hasQueryType(type))
-        .toList();
+    var queryList =
+        queries.where((element) => element.type == type && _grammar.hasQueryType(type)).toList();
     if (queryList.isEmpty) {
       return null;
     }
 
     return codeGenUtils
-        .createClass(className: classNameFromType(type), statements: [
-      declareAdapter(type),
+        .createClass(staticClass: true, className: classNameFromType(type), statements: [
+      ...declareAdapter(type),
       "final Map<String, String> fragmentMap;",
+      "final GQJsonEncoder encoder;",
+      "final GQJsonDecoder decoder;",
       codeGenUtils.createMethod(
+          returnType: 'public',
           methodName: classNameFromType(type),
           arguments: _declareConstructorArgs(type),
-          namedArguments: false,
           statements: [
-            if (type == GQQueryType.subscription)
-              '_handler = _SubscriptionHandler(adapter);',
+            'this.adapter = adapter;',
+            'this.fragmentMap = fragmentMap;',
+            'this.encoder = encoder;',
+            'this.decoder = decoder;',
+            if (type == GQQueryType.subscription) '_handler = _SubscriptionHandler(adapter);',
           ]),
       ...queryList.map((e) => queryToMethod(e))
     ]);
@@ -99,58 +112,54 @@ class DartClientSerializer extends ClientSerilaizer {
 
   List<String> _declareConstructorArgs(GQQueryType type) {
     if (type == GQQueryType.subscription) {
-      return ['WebSocketAdapter adapter', 'this.fragmentMap'];
+      return [
+        'GQWebSocketAdapter adapter',
+        'Map<String, String> fragmentMap',
+        'GQJsonEncoder encoder',
+        'GQJsonDecoder decoder',
+      ];
     }
-    return ['this._adapter', 'this.fragmentMap'];
+    return [
+      'GQClientAdapter adapter',
+      'Map<String, String> fragmentMap',
+      'GQJsonEncoder encoder',
+      'GQJsonDecoder decoder',
+    ];
   }
 
-  String declareAdapter(GQQueryType type) {
+  List<String> declareAdapter(GQQueryType type) {
     switch (type) {
       case GQQueryType.query:
       case GQQueryType.mutation:
-        return "final Future<String> Function(String payload${_grammar.operationNameAsParameter ? ', String $_operationNameParam' : ''}) _adapter;";
+        return ["final GQClientAdapter adapter;"];
       case GQQueryType.subscription:
-        return "late final _SubscriptionHandler _handler;";
+        return ["final _SubscriptionHandler _handler;", "final GQWebSocketAdapter adapter;"];
     }
   }
 
   String queryToMethod(GQQueryDefinition def) {
     return codeGenUtils.createMethod(
-      returnType: returnTypeByQueryType(def),
-      methodName: def.tokenInfo.token,
-      arguments: getArguments(def),
-      statements: [
-        "const operationName = '${def.tokenInfo}';",
-        if (def.fragments(_grammar).isNotEmpty)
-        ...[
-          "final fragsValues = [",
-          ...def
-          .fragments(_grammar)
-          .map((e) => '"${e.tokenInfo}",'),
-          '].map((fragName) => fragmentMap[fragName]!).join(' ');'
-        ],
-        if (def.fragments(_grammar).isEmpty) 
-          "const query = '''${_grammar.serializer.serializeQueryDefinition(def)}''';"
-        else
-          "final query = '''${_grammar.serializer.serializeQueryDefinition(def)} \${fragsValues}''';",
-        generateVariables(def),
-        "final payload = GQPayload(query: query, operationName: operationName, variables: variables);",
-        _serializeAdapterCall(def)
-      ]
-    );
-   
+        returnType: 'public ${returnTypeByQueryType(def)}',
+        methodName: def.tokenInfo.token,
+        arguments: getArguments(def),
+        statements: [
+          'String operationName = "${def.tokenInfo}";',
+          "List<String> fragsValues = Arrays.asList(${def.fragments(_grammar).map((e) => 'fragmentMap.get("${e.token}")').join(", ")});",
+          'String query = "${gqlSerializer.serializeQueryDefinition(def)} " + String.join(" ", fragsValues);',
+          generateVariables(def),
+          "GQPayload payload = GQPayload.builder().query(query).operationName(operationName).variables(variables).build();",
+          _serializeAdapterCall(def)
+        ]);
   }
 
   String generateVariables(GQQueryDefinition def) {
-    var buffer = StringBuffer("final variables = <String, dynamic>{");
+    var buffer = StringBuffer("Map<String, Object> variables = new HashMap<String, Object>();");
     buffer.writeln();
     def.arguments
         .map((e) =>
-            "'${e.dartArgumentName}': ${_serializeArgumentValue(def, e.token)},")
-        .forEach((line) {
-      buffer.writeln(line.ident());
-    });
-    buffer.writeln("};");
+            'variables.put("${e.dartArgumentName}", ${_serializeArgumentValue(def, e.token)});')
+        .forEach(buffer.writeln);
+
     return buffer.toString();
   }
 
@@ -162,16 +171,17 @@ return _handler.handle(payload).map((e) => ${def.getGeneratedTypeDefinition().to
           .trim()
           .ident();
     }
-    return """
-return _adapter(json.encode(payload.toJson())${_grammar.operationNameAsParameter ? ', operationName' : ''}).asStream().map((response) {
-    Map<String, dynamic> result = jsonDecode(response);
-    if (result.containsKey("errors")) {
-      throw result["errors"].map((error) => GQError.fromJson(error)).toList();
-    }
-    var data = result["data"];
-    return ${def.getGeneratedTypeDefinition().tokenInfo}.fromJson(data);
-}).first;
-""";
+    return [
+      "String encodedPayload = encoder.encode(payload);",
+      "String responseText = adapter.execute(encodedPayload);",
+      "Map<String, Object> decodedResponse = decoder.decode(responseText);",
+      codeGenUtils
+          .ifStatement(condition: 'decodedResponse.containsKey("error")', ifBlockStatements: [
+        'throw new RuntimeException(decodedResponse.get("error").toString());'
+      ], elseBlockStatements: [
+        'return ${def.getGeneratedTypeDefinition().tokenInfo}.fromJson((Map<String, Object>)decodedResponse.get("data"));'
+      ])
+    ].join("\n");
   }
 
   String _serializeArgumentValue(GQQueryDefinition def, String argName) {
@@ -210,20 +220,17 @@ return _adapter(json.encode(payload.toJson())${_grammar.operationNameAsParameter
       return [];
     }
     return def.arguments
-        .map((e) =>
-            "${serializer.serializeType(e.type, false)} ${e.dartArgumentName}")
-        .map((e) => "required $e")
+        .map((e) => "${serializer.serializeType(e.type, false)} ${e.dartArgumentName}")
         .toList();
-  
   }
 
   String returnTypeByQueryType(GQQueryDefinition def) {
     var gen = def.getGeneratedTypeDefinition();
 
     if (def.type == GQQueryType.subscription) {
-      return "Stream<${gen.tokenInfo.token}>";
+      return "void";
     }
-    return "Future<${gen.tokenInfo.token}>";
+    return gen.tokenInfo.token;
   }
 
   String serializeSubscriptions() {
@@ -233,23 +240,34 @@ return _adapter(json.encode(payload.toJson())${_grammar.operationNameAsParameter
     return """
 $_subscriptionHandler
 $_streamSink
-$_webSocketAdapter
 """;
   }
 
-  String get fileExtension => '.dart';
+  String get fileExtension => '.java';
+
+  @override
+  Set<GQToken> getImportDependecies(GQGrammar g) {
+    var result = {...super.getImportDependecies(g)};
+    result.addAll(
+        ['GQJsonEncoder', 'GQJsonDecoder', 'GQClientAdapter'].map((e) => g.getTypeByName(e)!));
+    var adapter = g.getTokenByKey('GQWebSocketAdapter');
+    if (adapter != null) {
+      result.add(adapter);
+    }
+    return result;
+  }
 }
 
 const _subscriptionHandler = """
 
-class GraphqlWsMessageTypes {
+static class GraphqlWsMessageTypes {
   /// Client initializes connection.
   /// Example: { "type": "connection_init", "payload": { "authToken": "abc123" } }
-  static const String connectionInit = 'connection_init';
+  public static final String connectionInit = "connection_init";
 
   /// Server acknowledges connection.
   /// Example: { "type": "connection_ack" }
-  static const String connectionAck = 'connection_ack';
+  public static final String connectionAck = "connection_ack";
 
   /// Client subscribes to an operation.
   /// Example:
@@ -258,15 +276,15 @@ class GraphqlWsMessageTypes {
   ///   "type": "subscribe",
   ///   "payload": { "query": "...", "variables": {} }
   /// }
-  static const String subscribe = 'subscribe';
+  public static final String subscribe = 'subscribe';
 
   /// Client or server pings for keep-alive.
   /// Example: { "type": "ping", "payload": {} }
-  static const String ping = 'ping';
+  public static final String ping = "ping";
 
   /// Response to ping.
   /// Example: { "type": "pong" }
-  static const String pong = 'pong';
+  public static final String pong = "pong";
 
   /// Server sends subscription data.
   /// Example:
@@ -275,15 +293,15 @@ class GraphqlWsMessageTypes {
   ///   "type": "next",
   ///   "payload": { "data": { "newMessage": { "id": "42", "content": "Hi" } } }
   /// }
-  static const String next = 'next';
+  public static final String next = "next";
 
   /// Server sends a fatal error for a subscription.
   /// Example: { "id": "1", "type": "error", "payload": { "message": "Validation failed" } }
-  static const String error = 'error';
+  public static final String error = "error";
 
   /// Client or server completes subscription.
   /// Example: { "id": "1", "type": "complete" }
-  static const String complete = 'complete';
+  public static final String complete = "complete";
 }
 
 
@@ -292,7 +310,7 @@ class _SubscriptionHandler {
   final _random = Random();
   final Map<String, StreamController<Map<String, dynamic>>> _map = {};
   final Map<String, StreamSubscription> _subs = {};
-  final WebSocketAdapter adapter;
+  final GQWebSocketAdapter adapter;
 
   final connectionInit = jsonEncode(GQSubscriptionErrorMessage(type: GraphqlWsMessageTypes.connectionInit).toJson());
   final pingMessage = jsonEncode(GQSubscriptionErrorMessage(type: GraphqlWsMessageTypes.ping).toJson());
@@ -460,17 +478,5 @@ class _StreamSink {
   final Stream<String> stream;
 
   _StreamSink({required this.sendMessage, required this.stream});
-}
-""";
-
-const _webSocketAdapter = """
-abstract class WebSocketAdapter {
-  Future<void> onConnectionReady();
-
-  Stream<String> get onMessageStream;
-
-  void sendMessage(String message);
-
-  void close();
 }
 """;
