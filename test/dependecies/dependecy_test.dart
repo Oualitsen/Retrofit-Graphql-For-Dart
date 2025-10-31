@@ -4,6 +4,7 @@ import 'package:retrofit_graphql/src/model/built_in_dirctive_definitions.dart';
 import 'package:retrofit_graphql/src/model/gq_token_with_fields.dart';
 import 'package:retrofit_graphql/src/serializers/client_serializers/dart_client_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/dart_serializer.dart';
+import 'package:retrofit_graphql/src/serializers/java_serializer.dart';
 import 'package:retrofit_graphql/src/serializers/language.dart';
 import 'package:retrofit_graphql/src/serializers/spring_server_serializer.dart';
 import 'package:test/test.dart';
@@ -896,5 +897,33 @@ type Query {
     var controller = g.controllers["PersonServiceController"]!;
     serializer.serializeController(controller, "com.myorg");
     expect(controller.getImports(g), contains(SpringImports.gqlDataFetchingEnvironment));
+  });
+
+  test("Java interface should import java.util.map when json methods are serialized", () {
+    final GQGrammar g = GQGrammar(mode: CodeGenerationMode.server);
+
+    var parsed = g.parse('''
+  ${getClientObjects()}
+  
+  interface BasicEntity {
+    id: ID!
+  }
+
+  type Person implements BasicEntity  {
+    id: ID!
+    name: String!
+    age: Int!
+  }
+
+  type Query {
+    getPerson: Person! @gqServiceName(name: "PersonService")
+  }
+  
+''');
+    expect(parsed is Success, true);
+    var serializer = JavaSerializer(g, generateJsonMethods: true);
+    var basicEntity = g.interfaces["BasicEntity"]!;
+    var basicEntitySerial = serializer.serializeTypeDefinition(basicEntity, 'com.myorg');
+    expect(basicEntitySerial, stringContainsInOrder(['import java.util.Map;']));
   });
 }

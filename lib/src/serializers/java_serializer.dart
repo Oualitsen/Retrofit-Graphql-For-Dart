@@ -585,43 +585,40 @@ class JavaSerializer extends GqSerializer {
 
   String _doSerializeTypeDefinition(GQTypeDefinition def) {
     final token = def.tokenInfo;
-    final interfaceNames = def.interfaceNames;
+    final interfaceNames = def.interfaceNames.map((e) => e.token).toSet();
+
     final decorators = serializeDecorators(def.getDirectives());
     var buffer = StringBuffer();
     if (decorators.isNotEmpty) {
       buffer.writeln(decorators.trim());
     }
     if (typesAsRecords) {
-      buffer.writeln(
-          serializeRecord(def.token, def.fields, interfaceNames.map((e) => e.token).toSet(), def));
+      buffer.writeln(serializeRecord(def.token, def.fields, interfaceNames, def));
       return buffer.toString();
     }
-
-    buffer.writeln(codeGenUtils.createClass(
-        className: token.token,
-        interfaceNames: interfaceNames.map((e) => e.token).toList(),
-        statements: [
-          ...def.getSerializableFields(grammar.mode).map((e) => serializeField(e)),
-          "",
-          generateContructor(def.token, [], "public", def, checkForNulls: typesCheckForNulls),
-          "",
-          generateContructor(def.token, def.getSerializableFields(grammar.mode), "private", def),
-          "",
-          generateBuilder(def.token, def.getSerializableFields(grammar.mode)),
-          "",
-          ...def
-              .getSerializableFields(grammar.mode)
-              .map((e) => serializeGetter(e, def, checkForNulls: typesCheckForNulls)),
-          "",
-          ...def
-              .getSerializableFields(grammar.mode)
-              .map((e) => serializeSetter(e, def, checkForNulls: typesCheckForNulls)),
-          generateEqualsAndHashCode(def),
-          if (generateJsonMethods) ...[
-            generateFromJson(def.getSerializableFields(grammar.mode), def.token, def),
-            generateToJson(def.getSerializableFields(grammar.mode), def)
-          ]
-        ]));
+    buffer.writeln(codeGenUtils
+        .createClass(className: token.token, interfaceNames: interfaceNames.toList(), statements: [
+      ...def.getSerializableFields(grammar.mode).map((e) => serializeField(e)),
+      "",
+      generateContructor(def.token, [], "public", def, checkForNulls: typesCheckForNulls),
+      "",
+      generateContructor(def.token, def.getSerializableFields(grammar.mode), "private", def),
+      "",
+      generateBuilder(def.token, def.getSerializableFields(grammar.mode)),
+      "",
+      ...def
+          .getSerializableFields(grammar.mode)
+          .map((e) => serializeGetter(e, def, checkForNulls: typesCheckForNulls)),
+      "",
+      ...def
+          .getSerializableFields(grammar.mode)
+          .map((e) => serializeSetter(e, def, checkForNulls: typesCheckForNulls)),
+      generateEqualsAndHashCode(def),
+      if (generateJsonMethods) ...[
+        generateFromJson(def.getSerializableFields(grammar.mode), def.token, def),
+        generateToJson(def.getSerializableFields(grammar.mode), def)
+      ]
+    ]));
     return buffer.toString();
   }
 
@@ -689,14 +686,17 @@ class JavaSerializer extends GqSerializer {
     if (decorators.isNotEmpty) {
       buffer.writeln(decorators.trim());
     }
-
+    bool generateJsonConverstionMethods =
+        generateJsonMethods && interface.getDirectiveByName(gqInterfaceFieldAsProperties) == null;
+    if (generateJsonConverstionMethods) {
+      interface.addImport(JavaImports.map);
+    }
     buffer.writeln(codeGenUtils.createInterface(
         interfaceName: token.token,
         interfaceNames: interfaces.map((e) => e.tokenInfo.token).toList(),
         statements: [
           ...fields.map((f) => _serializeInterfaceField(f, getters)),
-          if (generateJsonMethods &&
-              interface.getDirectiveByName(gqInterfaceFieldAsProperties) == null) ...[
+          if (generateJsonConverstionMethods) ...[
             "",
             "Map<String, Object> toJson();",
             _serializeFromJsonForInterface(interface.token, interface.implementations)
@@ -757,7 +757,7 @@ class JavaSerializer extends GqSerializer {
   @override
   String serializeImport(String import) {
     if (import == importList) {
-      return 'import java.util.List;';
+      return 'import ${JavaImports.list};';
     }
     return 'import ${import};';
   }

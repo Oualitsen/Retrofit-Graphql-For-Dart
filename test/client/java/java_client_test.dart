@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 import 'package:retrofit_graphql/src/gq_grammar.dart';
 import 'package:petitparser/petitparser.dart';
 
-const outputDir = "../gqlJavaClient/src/main/java/org/gqlclient/generated";
+const outputDir = "../gql-test-projects/gqlJavaClient/src/main/java/org/gqlclient/generated";
 
 getConfig(GQGrammar g) {
   return GeneratorConfig(
@@ -32,29 +32,47 @@ void main() async {
   ${javaJsonEncoderDecorder}
   ${javaClientAdapterNoParamSync}
   ${javaWebSocketAdapter}
+ 
 
-  type Person {
-    id: String
-    car: Car
-  }
-  type Car {
+ directive @gqServiceName(name: String) on FIELD_DEFINITION
+directive @gqSkipOnServer(mapTo: String, batch: Boolean) on FIELD_DEFINITION|OBJECT
+directive @gqSkipOnClient on FIELD_DEFINITION|OBJECT
+
+type Car {
     make: String
-  }
-  input CarInput {
-    make: String!
-  }
-  type Query {
-    getCar(id: ID!): Car!
-    getPerson: Person!
-  }
+    model: String
+}
 
-  type Mutation {
-    createCar(input: CarInput!): Car!
-  }
+type User {
+    id: ID!
+    name: String
+}
 
-  type Subscription {
-    watchCar: Car!
-  }
+
+
+input UserInput {
+    name: String!
+    gender: Gender!
+}
+
+enum Gender {
+    male, female
+}
+
+type Query {
+    getCarsByUserId(userId: String!): [Car!]! @gqServiceName(name: "CarService")
+    getUser: User! @gqServiceName(name: "CarService")
+}
+
+type Mutation {
+    createUser(input: UserInput!): User!
+}
+
+type Subscription {
+  watchUser: User!
+}
+
+ 
 ''');
     expect(parsed is Success, true);
     await generateClientClassesJava(g, getConfig(g), DateTime.now(),

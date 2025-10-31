@@ -558,7 +558,10 @@ extension GQGrammarExtension on GQGrammar {
 
   void addClientTypesToProjectedTypes() {
     for (var type in clientTypes) {
-      projectedTypes[type] = getType(type.toToken());
+      var t = types[type];
+      if (t != null) {
+        projectedTypes[type] = t;
+      }
     }
 
     for (var type in clientInterfaces) {
@@ -835,7 +838,9 @@ extension GQGrammarExtension on GQGrammar {
   }
 
   List<GQTypeDefinition> getProjectdeTypesImplementing(GQInterfaceDefinition def) {
-    return projectedTypes.values.where((pt) => pt.getInterfaceNames().contains(def.token)).toList();
+    return projectedTypes.values.where((pt) {
+      return pt.getInterfaceNames().contains(def.token);
+    }).toList();
   }
 
   List<GQTypeDefinition> getTypesImplementing(GQInterfaceDefinition def) {

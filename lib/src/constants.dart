@@ -61,12 +61,16 @@ const javaJsonEncoderDecorder = '''
 
 const javaWebSocketAdapter = '''
 scalar void ${gqExternal}(gqClass: "void")
+scalar Consumer ${gqExternal}(gqClass: "Consumer<String>", gqImport: "java.util.function.Consumer")
+scalar VoidConsumer ${gqExternal}(gqClass: "Consumer<Void>", gqImport: "java.util.function.Consumer")
+scalar ThrowableConsumer ${gqExternal}(gqClass: "Consumer<Throwable>", gqImport: "java.util.function.Consumer")
+scalar GQException ${gqExternal}(gqClass: "GQClient.GQException")
 
 interface GQWebSocketAdapter ${gqInterfaceFieldAsProperties} ${gqInternal} {
-   onConnectionReady(): void
-   onMessage(message: String!): void
-   sendMessage(message: String!): void
-   close(): void
+   connect(onConnect: VoidConsumer!, onFailure: ThrowableConsumer): void!
+   onMessage(message: Consumer!): void!
+   sendMessage(message: String!): void!
+   close(): void!
 }
 ''';
 
@@ -140,6 +144,8 @@ class JavaImports {
   static const list = "java.util.List";
   static const arrayList = "java.util.ArrayList";
   static const arrays = "java.util.Arrays";
+  static const collections = "java.util.Collections";
+  static const uuid = "java.util.UUID";
 }
 
 class SpringImports {
